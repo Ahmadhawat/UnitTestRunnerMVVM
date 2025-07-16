@@ -1,0 +1,251 @@
+Here is the complete code for the files in:
+
+```
+├── Models/
+│   ├── TestResult.cs
+│   ├── TestRunner.cs
+│   └── Interfaces/ITestRunner.cs
+│
+├── ViewModels/
+│   ├── BaseViewModel.cs
+│   ├── MainViewModel.cs
+│   └── SettingsViewModel.cs
+```
+
+---
+
+### ✅ `Models/TestResult.cs`
+
+```csharp
+namespace UnitTestRunnerMVVM.Models
+{
+    public enum TestResultStatus
+    {
+        Info,
+        Passed,
+        Failed
+    }
+
+    public class TestResult
+    {
+        public string Message { get; set; }
+        public TestResultStatus Status { get; set; }
+    }
+}
+```
+
+---
+
+### ✅ `Models/TestRunner.cs`
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using UnitTestRunnerMVVM.Models.Interfaces;
+
+namespace UnitTestRunnerMVVM.Models
+{
+    public class TestRunner : ITestRunner
+    {
+        public async Task<List<TestResult>> RunTestsAsync(string dllPath)
+        {
+            var results = new List<TestResult>();
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "vstest.console.exe",
+                Arguments = $"\"{dllPath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = psi };
+            process.Start();
+
+            string output = await process.StandardOutput.ReadToEndAsync();
+            string error = await process.StandardError.ReadToEndAsync();
+
+            process.WaitForExit();
+
+            foreach (var line in output.Split(Environment.NewLine))
+            {
+                if (line.Contains("Passed"))
+                    results.Add(new TestResult { Message = line, Status = TestResultStatus.Passed });
+                else if (line.Contains("Failed"))
+                    results.Add(new TestResult { Message = line, Status = TestResultStatus.Failed });
+                else
+                    results.Add(new TestResult { Message = line, Status = TestResultStatus.Info });
+            }
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                results.Add(new TestResult { Message = "[ERROR] " + error, Status = TestResultStatus.Failed });
+            }
+
+            return results;
+        }
+    }
+}
+```
+
+---
+
+### ✅ `Models/Interfaces/ITestRunner.cs`
+
+```csharp
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace UnitTestRunnerMVVM.Models.Interfaces
+{
+    public interface ITestRunner
+    {
+        Task<List<TestResult>> RunTestsAsync(string dllPath);
+    }
+}
+```
+
+---
+
+### ✅ `ViewModels/BaseViewModel.cs`
+
+```csharp
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+namespace UnitTestRunnerMVVM.ViewModels
+{
+    public abstract class BaseViewModel : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+}
+```
+
+---
+
+### ✅ `ViewModels/MainViewModel.cs`
+
+```csharp
+using Microsoft.Win32;
+using System;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using UnitTestRunnerMVVM.Helpers;
+using UnitTestRunnerMVVM.Models;
+using UnitTestRunnerMVVM.Models.Interfaces;
+
+namespace UnitTestRunnerMVVM.ViewModels
+{
+    public class MainViewModel : BaseViewModel
+    {
+        private readonly ITestRunner _testRunner;
+        private string _dllPath;
+
+        public string DllPath
+        {
+            get => _dllPath;
+            set
+            {
+                _dllPath = value;
+                OnPropertyChanged();
+                _runTestsCommand?.RaiseCanExecuteChanged();
+            }
+        }
+
+        public ObservableCollection<string> ConsoleOutput { get; } = new();
+        public ObservableCollection<TestResult> SummaryResults { get; } = new();
+
+        public ICommand BrowseDllCommand { get; }
+        public ICommand RunTestsCommand => _runTestsCommand;
+
+        private readonly AsyncRelayCommand _runTestsCommand;
+
+        public MainViewModel(ITestRunner testRunner)
+        {
+            _testRunner = testRunner;
+            BrowseDllCommand = new RelayCommand(BrowseDll);
+            _runTestsCommand = new AsyncRelayCommand(RunTestsAsync, () => !string.IsNullOrWhiteSpace(DllPath));
+        }
+
+        private void BrowseDll()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "DLL Files (*.dll)|*.dll",
+                Title = "Select Unit Test DLL"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                DllPath = dialog.FileName;
+            }
+        }
+
+        private async Task RunTestsAsync()
+        {
+            try
+            {
+                ConsoleOutput.Clear();
+                SummaryResults.Clear();
+
+                var results = await _testRunner.RunTestsAsync(DllPath);
+                foreach (var result in results)
+                {
+                    ConsoleOutput.Add(result.Message);
+                    if (result.Status != TestResultStatus.Info)
+                        SummaryResults.Add(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                var error = new TestResult
+                {
+                    Message = "[ERROR] " + ex.Message,
+                    Status = TestResultStatus.Failed
+                };
+                ConsoleOutput.Add(error.Message);
+                SummaryResults.Add(error);
+            }
+        }
+    }
+}
+```
+
+---
+
+### ✅ `ViewModels/SettingsViewModel.cs`
+
+```csharp
+namespace UnitTestRunnerMVVM.ViewModels
+{
+    public class SettingsViewModel : BaseViewModel
+    {
+        private string _setting;
+
+        public string Setting
+        {
+            get => _setting;
+            set
+            {
+                _setting = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+}
+```
+
+---
+
+Let me know if you'd like this bundled as downloadable files, or if you want corresponding unit tests or navigation between Main and Settings view.
