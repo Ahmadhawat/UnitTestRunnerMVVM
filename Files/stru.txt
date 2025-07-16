@@ -1,0 +1,62 @@
+UnitTestRunnerMVVM/
+│
+├── App.xaml
+├── Program.cs
+│
+├── Models/
+│   ├── TestResult.cs
+│   ├── TestRunner.cs
+│   └── Interfaces/ITestRunner.cs
+│
+├── ViewModels/
+│   ├── BaseViewModel.cs
+│   ├── MainViewModel.cs
+│   └── SettingsViewModel.cs
+│
+├── Views/
+│   ├── MainWindow.xaml
+│   └── SettingsView.xaml
+│
+├── Helpers/
+│   ├── RelayCommand.cs
+│   ├── AsyncRelayCommand.cs
+│   └── Logger.cs
+│
+├── Services/
+│   ├── TestRunnerService.cs
+│   ├── LoggerService.cs
+│   └── NavigationService.cs
+
+
+
+now  
+
+UnitTestRunnerMVVM/
+│
+├── App.xaml
+├── Program.cs
+│
+├── Models/
+│   ├── TestResult.cs
+│   └── Interfaces/
+│       └── ITestRunner.cs
+│
+├── ViewModels/
+│   ├── BaseViewModel.cs
+│   ├── MainViewModel.cs
+│   └── SettingsViewModel.cs
+│
+├── Views/
+│   ├── MainWindow.xaml
+│   └── SettingsView.xaml
+│
+├── Helpers/
+│   ├── RelayCommand.cs
+│   ├── AsyncRelayCommand.cs
+│   └── Logger.cs
+│
+├── Services/
+│   ├── TestRunnerService.cs
+│   ├── LoggerService.cs
+│   └── NavigationService.cs
+
