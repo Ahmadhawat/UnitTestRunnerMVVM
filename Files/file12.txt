@@ -1,0 +1,62 @@
+Great catch — you're getting this error:
+
+> MC3005: The property 'DataContext' must be in the default namespace or in the element namespace...
+
+
+
+And it's pointing to this line in your TestSummaryControl.xaml:
+
+<UserControl ... 
+             DataContext="{d:DesignInstance Type=viewmodels:BrowseDllMainWindow}">
+
+
+---
+
+✅ Why This Error Happens
+
+You're trying to set **d:DataContext** (a design-time helper) but accidentally wrote it as a runtime DataContext on the root <UserControl>.
+
+The DataContext property belongs to the WPF namespace:
+
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+
+But d:DataContext belongs to the Blend design namespace, which is:
+
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+
+Your error means:
+
+> “You're using DataContext with the d: prefix, but WPF thinks you're assigning a real runtime DataContext, which is not valid in this context.”
+
+
+
+
+---
+
+✅ Fix
+
+Just change DataContext to d:DataContext so it's used only for design-time, like this:
+
+<UserControl x:Class="NeuUITest.UI.TestSummary.TestSummaryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewmodels="clr-namespace:NeuUITest.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewmodels:TestSummaryViewModel}">
+
+✅ This means:
+
+d:DataContext is used only for Visual Studio designer (preview)
+
+At runtime, your MainWindow.xaml will bind to real data
+
+The error will go away
+
+
+
+---
+
+Let me know if you want to auto-populate PassedCount, etc. with dummy values in the designer too (for preview purposes)!
+
