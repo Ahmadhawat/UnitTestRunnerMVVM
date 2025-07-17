@@ -186,3 +186,78 @@ Show a chart or progress bar inside the summary.
 Add unit tests for the summary viewmodel.
 
 
+,......
+Klar! Was du möchtest, ist die ShowAboutCommand-Logik aus der MainMainWindow-Klasse zu entfernen und diese wie das BrowseDLLCommand in eine eigene ViewModel-Klasse (z. B. AboutWindowViewModel) auszulagern.
+
+
+---
+
+🔧 Schritt-für-Schritt-Lösung:
+
+1. ShowAboutCommand aus MainMainWindow.cs entfernen:
+
+// Entferne oder kommentiere folgende Zeilen aus MainMainWindow.cs
+public ICommand ShowAboutCommand { get; }
+
+// Entferne aus dem Konstruktor:
+ShowAboutCommand = new RelayCommand(ShowAboutWindow);
+
+// Optional: Entferne die Methode ShowAboutWindow() ebenfalls
+
+
+---
+
+2. Neue Klasse erstellen: AboutWindowViewModel.cs
+
+using System.Windows.Input;
+using NeuUITest.Helpers;
+
+namespace NeuUITest.ViewModels
+{
+    public class AboutWindowViewModel : MainWindowBase
+    {
+        public ICommand ShowAboutCommand { get; }
+
+        public AboutWindowViewModel()
+        {
+            ShowAboutCommand = new RelayCommand(ShowAboutWindow);
+        }
+
+        private void ShowAboutWindow()
+        {
+            var win = new AboutWindow();
+            win.ShowDialog(); // öffnet das Fenster als Popup
+        }
+    }
+}
+
+
+---
+
+3. In MainMainWindow das neue ViewModel verwenden:
+
+public AboutWindowViewModel AboutViewModel { get; }
+
+public MainMainWindow()
+{
+    // andere ViewModels
+    AboutViewModel = new AboutWindowViewModel();
+}
+
+
+---
+
+✅ Vorteile:
+
+Bessere Trennung der Verantwortlichkeiten (MVVM-Konform).
+
+Der ShowAboutCommand liegt nun bei dem AboutWindowViewModel.
+
+Deine MainMainWindow bleibt sauber und kümmert sich nicht um die Logik des About-Fensters.
+
+
+
+---
+
+Wenn du möchtest, kann ich dir auch helfen, die Buttons im XAML entsprechend an das neue ViewModel zu binden. Sag einfach Bescheid!
+
