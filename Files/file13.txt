@@ -1,0 +1,116 @@
+Excellent question — and your reasoning is spot-on.
+
+🟡 You're asking:
+
+> Why does the About button not work, while Browse DLL does?
+
+
+
+Let’s break it down based on what we see in your project and photos:
+
+
+---
+
+✅ 1. How Browse DLL Works
+
+Command="{Binding BrowseDllViewModel.BrowseDllCommand}"
+
+BrowseDllViewModel is exposed from MainMainWindow
+
+BrowseDllCommand is a valid ICommand inside that ViewModel
+
+XAML command binding resolves successfully through:
+
+public BrowseDllMainWindow BrowseDllViewModel { get; }
+
+
+✅ So WPF finds the command and calls it when clicked.
+
+
+---
+
+❌ 2. Why About Button Fails
+
+In your XAML, you originally had:
+
+Command="{Binding MainAboutWindow}"   ← ❌ Not a command
+
+Then you correctly added:
+
+public ICommand ShowAboutCommand => MainAboutWindow.ShowAboutCommand;
+
+✅ But here's the missing key part:
+
+
+---
+
+❗ Missing: PropertyChanged Notification
+
+If you declared ShowAboutCommand like this:
+
+public ICommand ShowAboutCommand => MainAboutWindow.ShowAboutCommand;
+
+It does not notify WPF that ShowAboutCommand has changed — unlike BrowseDllViewModel.BrowseDllCommand, which is set once and referenced directly.
+
+
+---
+
+✅ 3. The Correct, Working Pattern
+
+In MainMainWindow.cs, do this:
+
+public ICommand ShowAboutCommand { get; }
+
+And initialize it in the constructor:
+
+ShowAboutCommand = MainAboutWindow.ShowAboutCommand;
+
+This makes it behave exactly like BrowseDllCommand, i.e., a fixed, initialized property WPF can bind to reliably.
+
+
+---
+
+✅ Final Code Snippet
+
+MainMainWindow.cs:
+
+public class MainMainWindow : MainWindowBase
+{
+    public MainAboutWindow MainAboutWindow { get; }
+    public ICommand ShowAboutCommand { get; }
+
+    public MainMainWindow()
+    {
+        BrowseDllViewModel = new BrowseDllMainWindow();
+        TestSummaryViewModel = new TestSummaryViewModel();
+        MainAboutWindow = new MainAboutWindow();
+        ShowAboutCommand = MainAboutWindow.ShowAboutCommand;
+
+        RunTestsViewModel = new RunTestsMainWindow(
+            BrowseDllViewModel, ConsoleOutput, SummaryResults,
+            new TestExecutionService(), TestSummaryViewModel);
+    }
+}
+
+MainWindow.xaml:
+
+<Button Content="About" Width="100"
+        Command="{Binding ShowAboutCommand}"
+        Margin="10,0,0,0" />
+
+
+---
+
+✅ Now It Will Work Like Browse DLL
+
+Button	Source of Command	Works?
+
+Browse DLL	BrowseDllViewModel.BrowseDllCommand	✅
+About	ShowAboutCommand (exposed directly)	✅
+
+
+
+---
+
+Let me know if you want to refactor the AboutWindow to use MVVM more fully — for example, having its own RelayCommand to close itself via a ViewModel.
+
