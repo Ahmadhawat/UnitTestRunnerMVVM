@@ -1,0 +1,95 @@
+Ah — now I understand exactly what you mean:
+
+👉 You want to define the model in Kern, and then in your ViewModel, create an instance of that model and expose its properties to the XAML UI.
+
+That's the proper MVVM approach. Let me walk you through it with a clean example:
+
+
+---
+
+✅ Step-by-Step: Use a Model from Kern in ViewModel
+
+
+---
+
+🧩 1. Define the model class in Kern
+
+Create: AppInfoModel.cs
+
+namespace NeuUITest.Kern
+{
+    public class AppInfoModel
+    {
+        public string AppName { get; set; }
+        public string Version { get; set; }
+        public string Author { get; set; }
+
+        public AppInfoModel()
+        {
+            AppName = "Unit Test Runner";
+            Version = "0.0.1";
+            Author = "TT";
+        }
+    }
+}
+
+
+---
+
+🧠 2. Use that model inside your ViewModel
+
+Update: MainAboutWindow.cs in ViewModels.About
+
+using NeuUITest.Kern;
+
+namespace NeuUITest.ViewModels.About
+{
+    public class MainAboutWindow
+    {
+        private readonly AppInfoModel _appInfo;
+
+        public string AppName => _appInfo.AppName;
+        public string Version => _appInfo.Version;
+        public string Author => _appInfo.Author;
+
+        public MainAboutWindow()
+        {
+            _appInfo = new AppInfoModel(); // <-- create model here
+        }
+    }
+}
+
+
+---
+
+🪟 3. Your XAML stays the same (already correct):
+
+<Window.DataContext>
+    <vm:MainAboutWindow />
+</Window.DataContext>
+
+<StackPanel Margin="20">
+    <TextBlock Text="{Binding AppName}" FontSize="24" FontWeight="Bold" />
+    <TextBlock Text="{Binding Version}" FontSize="16" Margin="0,10,0,0" />
+    <TextBlock Text="{Binding Author}" FontSize="16" />
+</StackPanel>
+
+
+---
+
+🔍 Summary
+
+Layer	Content
+
+Kern	AppInfoModel — pure data model ✅
+ViewModel	MainAboutWindow uses model ✅
+XAML	Binds to ViewModel properties ✅
+
+
+✅ You now fully separate data (model) from presentation logic (viewmodel) — this is true MVVM.
+
+
+---
+
+If you want, I can also show how to inject AppInfoModel via constructor (for testing/mock purposes). Would you like that?
+
