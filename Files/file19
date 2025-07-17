@@ -13,3 +13,46 @@ In MVVM kommuniziert die UI nicht direkt mit dem Code, sondern über `Commands`.
 ```csharp
 public ICommand RunTestsCommand { get; }
 RunTestsCommand = new RelayCommand(async () => await RunTestsAsync(), () => !IsTestRunning);
+
+
+
+
+
+### `UI/` (View)
+
+Dieser Ordner enthält die **Benutzeroberfläche der Anwendung**, definiert ausschließlich in **XAML**.
+
+🔒 **Wichtig:** In einer sauberen MVVM-Architektur gehört **keine Logik in den Code-Behind** (`.xaml.cs`) – alles wird über **Data Bindings** und **Commands** an das ViewModel angebunden.
+
+---
+
+#### Enthaltene Views:
+
+- **`MainWindow.xaml`**  
+  Hauptfenster der Anwendung. Enthält die UI-Elemente zur:
+  - Auswahl einer Test-DLL
+  - Ausführung der Tests
+  - Anzeige der Terminalausgabe (ConsoleOutput)
+  - Darstellung der Testergebnisse (SummaryResults)
+
+- **`AboutWindow.xaml`**  
+  Ein modales Dialogfenster, das Informationen wie App-Name, Version und Autor anzeigt – gebunden an `MainAboutWindow`.
+
+- **`TestSummaryControl.xaml`**  
+  Eine wiederverwendbare **UserControl**, die die Anzahl bestandener, fehlgeschlagener und aller Tests anzeigt – eingebunden in `MainWindow.xaml`.
+
+---
+
+#### Umgang mit Code-Behind (`.xaml.cs`)
+
+Im Sinne von MVVM soll der Code-Behind **nur für UI-technische Initialisierungen** wie `InitializeComponent()` verwendet werden.
+
+❌ **Keine Logik, keine Events, keine direkten Funktionsaufrufe** im Code-Behind!  
+✅ Stattdessen: Alles über das zugehörige ViewModel binden (`DataContext`, `ICommand`, Properties).
+
+---
+
+📌 **Nutzen:**  
+- Die Views zeigen **ausschließlich** Daten an, die vom ViewModel über Bindings bereitgestellt werden.
+- Sie enthalten **keine Logik**, was die Wartbarkeit, Testbarkeit und Wiederverwendbarkeit verbessert.
+- Designer:innen können die Views gestalten, ohne sich mit Logik befassen zu müssen.
