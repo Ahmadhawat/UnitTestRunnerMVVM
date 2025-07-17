@@ -1,0 +1,173 @@
+Great! To add a TestSummaryControl while keeping the MVVM pattern intact, you'll need to follow these steps:
+
+
+---
+
+✅ Goal
+
+Create a UserControl that:
+
+Displays a summary of test results (e.g., number passed, failed, total).
+
+Binds to the existing ObservableCollection<TestResult> SummaryResults.
+
+Integrates cleanly into your MVVM structure.
+
+
+
+---
+
+🔧 1. Create the Control
+
+📄 TestSummaryControl.xaml
+
+Create this file under a new folder Controls/:
+
+<UserControl x:Class="NeuUITest.Controls.TestSummaryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:NeuUITest.Controls"
+             Height="Auto" Width="Auto">
+    <Grid>
+        <StackPanel Orientation="Horizontal" Margin="10" HorizontalAlignment="Center">
+            <TextBlock Text="Passed:" FontWeight="Bold" Margin="5,0"/>
+            <TextBlock Text="{Binding PassedCount}" Foreground="Green" Margin="5,0"/>
+            <TextBlock Text="Failed:" FontWeight="Bold" Margin="15,0,5,0"/>
+            <TextBlock Text="{Binding FailedCount}" Foreground="Red" Margin="5,0"/>
+            <TextBlock Text="Total:" FontWeight="Bold" Margin="15,0,5,0"/>
+            <TextBlock Text="{Binding TotalCount}" Foreground="Black" Margin="5,0"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
+
+
+---
+
+🧠 2. Create the ViewModel
+
+📄 TestSummaryViewModel.cs (in ViewModels/ folder)
+
+This will reflect the counts dynamically based on the test results.
+
+using NeuUITest.Kern;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+
+namespace NeuUITest.ViewModels
+{
+    public class TestSummaryViewModel : INotifyPropertyChanged
+    {
+        private int _passedCount;
+        private int _failedCount;
+        private int _totalCount;
+
+        public int PassedCount
+        {
+            get => _passedCount;
+            private set { _passedCount = value; OnPropertyChanged(); }
+        }
+
+        public int FailedCount
+        {
+            get => _failedCount;
+            private set { _failedCount = value; OnPropertyChanged(); }
+        }
+
+        public int TotalCount
+        {
+            get => _totalCount;
+            private set { _totalCount = value; OnPropertyChanged(); }
+        }
+
+        public void UpdateCounts(ObservableCollection<TestResult> results)
+        {
+            PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+            FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+            TotalCount = PassedCount + FailedCount;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+    }
+}
+
+
+---
+
+🧩 3. Integrate into MainMainWindow.cs
+
+Update your main ViewModel to hold a TestSummaryViewModel instance and keep it in sync:
+
+public class MainMainWindow : MainWindowBase
+{
+    public BrowseDllMainWindow BrowseDllViewModel { get; }
+    public RunTestsMainWindow RunTestsViewModel { get; }
+
+    public ObservableCollection<string> ConsoleOutput { get; } = new();
+    public ObservableCollection<TestResult> SummaryResults { get; } = new();
+
+    public TestSummaryViewModel TestSummaryViewModel { get; }
+
+    public MainMainWindow()
+    {
+        BrowseDllViewModel = new BrowseDllMainWindow();
+        TestSummaryViewModel = new TestSummaryViewModel();
+        RunTestsViewModel = new RunTestsMainWindow(BrowseDllViewModel, ConsoleOutput, SummaryResults, new TestExecutionService(), TestSummaryViewModel);
+    }
+}
+
+
+---
+
+🔄 4. Update RunTestsMainWindow.cs to Notify the Summary ViewModel
+
+Update constructor to receive the summary VM:
+
+private readonly TestSummaryViewModel _summaryViewModel;
+
+public RunTestsMainWindow(..., TestSummaryViewModel summaryViewModel)
+{
+    ...
+    _summaryViewModel = summaryViewModel;
+}
+
+Then after adding results in RunTestsAsync():
+
+_summaryResults.Clear();
+foreach (var result in results)
+{
+    _consoleOutput.Add(result.Message);
+    if (result.Status != TestResultStatus.Info)
+        _summaryResults.Add(result);
+}
+_summaryViewModel.UpdateCounts(_summaryResults);
+
+
+---
+
+🖼️ 5. Use Control in MainWindow.xaml
+
+At the top of the grid (before ConsoleOutput list):
+
+xmlns:controls="clr-namespace:NeuUITest.Controls"
+
+<!-- Add below DLL path input area -->
+<controls:TestSummaryControl DataContext="{Binding TestSummaryViewModel}" Margin="0,10,0,10"/>
+
+
+---
+
+✅ Now Your UI Will Show:
+
+Live counts of passed, failed, and total tests.
+
+All fully MVVM-compliant.
+
+
+Would you like me to generate the full updated TestSummaryControl.xaml.cs or a visual preview?
+
