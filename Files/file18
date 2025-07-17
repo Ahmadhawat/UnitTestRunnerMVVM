@@ -1,0 +1,156 @@
+Awesome job getting it running — you're so close! 😄
+If the app runs but your Settings page is showing blank, here are the most likely causes and exact fixes:
+
+
+---
+
+✅ Let's Troubleshoot It Step-by-Step
+
+🔍 1. Check the SettingsPage.xaml Content
+
+Open your SettingsPage.xaml and make sure it actually has UI elements inside. Here's a working minimal example:
+
+<Page x:Class="NeuUITest.Views.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Settings">
+
+    <StackPanel Margin="20">
+        <TextBlock Text="⚙️ Settings" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <TextBlock Text="Theme:" Margin="0,10,0,0"/>
+        <ComboBox Width="200"
+                  SelectedItem="{Binding SelectedTheme}"
+                  ItemsSource="{Binding AvailableThemes}" />
+
+        <TextBlock Text="Auto Save Logs:" Margin="0,20,0,0"/>
+        <CheckBox IsChecked="{Binding IsAutoSaveEnabled}" Content="Enable" />
+
+        <Button Content="Save Settings"
+                Command="{Binding SaveSettingsCommand}"
+                Margin="0,20,0,0"
+                Width="120" />
+    </StackPanel>
+</Page>
+
+🟡 If this is empty or doesn't exist, nothing will render in the frame.
+
+
+---
+
+🔍 2. Ensure ViewModel Is Connected
+
+In MainMainWindow.cs you should have this setup:
+
+SettingsViewModel = new SettingsPageViewModel();
+SettingsPage = new SettingsPage
+{
+    DataContext = SettingsViewModel
+};
+
+✅ This makes sure the page is shown and is bound to the right ViewModel.
+
+
+---
+
+🔍 3. Check Frame Binding in MainWindow.xaml
+
+Make sure you're binding correctly in your XAML:
+
+<Frame Grid.Row="4"
+       Margin="0,10,0,0"
+       Content="{Binding SettingsPage}" />
+
+Also, check that Grid.Row="4" is valid:
+
+<Grid.RowDefinitions>
+    <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+    <RowDefinition Height="2*"/>   <!-- Console -->
+    <RowDefinition Height="2*"/>   <!-- Summary -->
+    <RowDefinition Height="Auto"/> <!-- Summary Control -->
+    <RowDefinition Height="3*"/>   <!-- Settings Page -->
+</Grid.RowDefinitions>
+
+🛑 If you forgot to define RowDefinition #4, it won't show anything!
+
+
+---
+
+🧪 4. Temporary Debug Test
+
+Inside SettingsPage.xaml, temporarily remove the bindings and just do this to test:
+
+<StackPanel Margin="20">
+    <TextBlock Text="If you see this, SettingsPage is working!" FontSize="20"/>
+</StackPanel>
+
+If this shows up → the Frame and page are working; the issue is your bindings.
+
+If this does NOT show up → your frame or data context is wrong.
+
+
+---
+
+✅ Once Working, Add Back ViewModel
+
+Here’s a correct SettingsPageViewModel.cs:
+
+public class SettingsPageViewModel : MainWindowBase
+{
+    public ObservableCollection<string> AvailableThemes { get; } =
+        new() { "Light", "Dark", "Blue" };
+
+    private string _selectedTheme = "Light";
+    public string SelectedTheme
+    {
+        get => _selectedTheme;
+        set
+        {
+            _selectedTheme = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private bool _isAutoSaveEnabled;
+    public bool IsAutoSaveEnabled
+    {
+        get => _isAutoSaveEnabled;
+        set
+        {
+            _isAutoSaveEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ICommand SaveSettingsCommand { get; }
+
+    public SettingsPageViewModel()
+    {
+        SaveSettingsCommand = new RelayCommand(() =>
+        {
+            // Placeholder for actual save logic
+            Debug.WriteLine($"Theme: {SelectedTheme}, AutoSave: {IsAutoSaveEnabled}");
+        });
+    }
+}
+
+
+---
+
+✅ Summary Checklist
+
+✅ Checkpoint	Done?
+
+SettingsPage.xaml has visible content	✔️
+Frame is bound correctly in XAML	✔️
+RowDefinition for that frame exists	✔️
+ViewModel set as DataContext in code	✔️
+You tested with dummy content temporarily	✔️
+
+
+
+---
+
+Want to upload your SettingsPage.xaml and ViewModel so I can check them directly?
+Or want to add a toggle button to show/hide the settings area?
+
