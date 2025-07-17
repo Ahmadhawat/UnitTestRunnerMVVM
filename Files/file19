@@ -1,0 +1,15 @@
+### `Helpers/` (Hilfsklassen)
+
+Dieser Ordner enthält allgemeine Hilfsklassen, die in mehreren ViewModels wiederverwendet werden – insbesondere für MVVM-typische Infrastruktur.
+
+- **`RelayCommand.cs`**  
+  Diese Klasse implementiert das `ICommand`-Interface und ermöglicht es, Methoden aus dem ViewModel an die Benutzeroberfläche zu binden.  
+  Sie unterstützt sowohl **synchrone** als auch **asynchrone** Ausführungen und ersetzt klassische Event-Handler in der UI.
+
+📌 **Warum ist das wichtig?**  
+In MVVM kommuniziert die UI nicht direkt mit dem Code, sondern über `Commands`. `RelayCommand` bietet eine flexible Möglichkeit, beliebige Aktionen an Schaltflächen, Menüpunkte usw. zu binden – **ohne Code-Behind**.
+
+📌 **Beispielhafte Verwendung**:
+```csharp
+public ICommand RunTestsCommand { get; }
+RunTestsCommand = new RelayCommand(async () => await RunTestsAsync(), () => !IsTestRunning);
