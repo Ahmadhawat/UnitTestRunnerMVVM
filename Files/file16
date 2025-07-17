@@ -1,0 +1,102 @@
+You're on the right track! Let's now merge SettingsPageViewModel into your MVVM architecture so that it's available from your MainMainWindow (your main ViewModel), and you can bind to it or open it in the UI.
+
+
+---
+
+✅ Step-by-Step Integration
+
+🧩 1. Add Property in MainMainWindow
+
+In your third image (MainMainWindow.cs), you already have properties for:
+
+BrowseDllViewModel
+
+RunTestsViewModel
+
+TestSummaryViewModel
+
+AboutViewModel
+
+
+Now add a property for SettingsPageViewModel:
+
+public SettingsPageViewModel SettingsViewModel { get; }
+
+Then initialize it in the constructor:
+
+SettingsViewModel = new SettingsPageViewModel();
+
+Your constructor becomes:
+
+public MainMainWindow()
+{
+    BrowseDllViewModel = new BrowseDllMainWindow();
+    TestSummaryViewModel = new TestSummaryControl();
+    RunTestsViewModel = new RunTestsMainWindow(BrowseDllViewModel, ConsoleOutput, SummaryResults, new TestExecutionService());
+    AboutViewModel = new AboutAboutWindow(new WindowService());
+    SettingsViewModel = new SettingsPageViewModel(); // ← Add this line
+}
+
+
+---
+
+🧠 2. Expose to XAML
+
+You can now use SettingsViewModel in XAML just like the others.
+For example, to bind a Frame to it:
+
+Option A – Load it into a Frame or ContentControl:
+
+Add to your MainWindow.xaml:
+
+<ContentControl Content="{Binding SettingsViewModel}" />
+
+This assumes your SettingsPage.xaml uses SettingsPageViewModel as its DataContext.
+
+Option B – Use a Button to open a new Window with SettingsPage
+
+Add a command to MainMainWindow like:
+
+public ICommand ShowSettingsCommand { get; }
+
+public MainMainWindow()
+{
+    // existing code...
+    ShowSettingsCommand = new RelayCommand(OpenSettingsWindow);
+}
+
+private void OpenSettingsWindow()
+{
+    var window = new Window
+    {
+        Title = "Settings",
+        Content = new SettingsPage(), // your Page
+        Width = 400,
+        Height = 300
+    };
+    window.ShowDialog();
+}
+
+Then in MainWindow.xaml, add a button:
+
+<Button Content="Settings" Width="100" Command="{Binding ShowSettingsCommand}" Margin="10,0,0,0"/>
+
+
+---
+
+✅ Summary
+
+What you did	How it works
+
+SettingsPageViewModel created	Holds settings-related data and commands
+Added to MainMainWindow	Central ViewModel contains it like others
+Opened with button or content	Allows UI to show Settings via MVVM correctly
+
+
+
+---
+
+If you want to navigate between Pages inside a Frame, I can also show you how to implement that navigation system.
+
+Would you like to do that next?
+
