@@ -56,3 +56,48 @@ Im Sinne von MVVM soll der Code-Behind **nur für UI-technische Initialisierunge
 - Die Views zeigen **ausschließlich** Daten an, die vom ViewModel über Bindings bereitgestellt werden.
 - Sie enthalten **keine Logik**, was die Wartbarkeit, Testbarkeit und Wiederverwendbarkeit verbessert.
 - Designer:innen können die Views gestalten, ohne sich mit Logik befassen zu müssen.
+
+
+
+
+### `UI/` (View)
+
+Dieser Ordner enthält die **grafische Benutzeroberfläche** der Anwendung – vollständig in **XAML** definiert.
+
+🔗 Die Views sind über **DataBindings** mit den ViewModels verbunden. Die Steuerung erfolgt durch Properties und Commands aus dem ViewModel.
+
+---
+
+#### Enthaltene Views:
+
+- **`MainWindow.xaml`**  
+  Hauptfenster der Anwendung. Beinhaltet die Steuerung für das Laden einer DLL, das Starten von Tests, Konsolenausgabe und Testergebnis-Zusammenfassung.
+
+- **`AboutWindow.xaml`**  
+  Zeigt App-Informationen wie Name, Version und Autor an – gebunden an ein passendes ViewModel (`MainAboutWindow`).
+
+- **`TestSummaryControl.xaml`**  
+  Wiederverwendbare `UserControl`, die den Teststatus grafisch zusammenfasst (Bestanden / Fehlgeschlagen / Gesamt).
+
+---
+
+#### Umgang mit Code-Behind (`.xaml.cs`)
+
+In MVVM sollte die Logik **möglichst** im ViewModel bleiben.  
+➡️ **Code-Behind ist nicht grundsätzlich verboten**, aber:
+
+✅ Verwende Code-Behind nur für:  
+- `InitializeComponent()`  
+- UI-spezifische Visuals (z. B. Animationen, Fokus setzen)  
+- Fenstersteuerung (`ShowDialog()`, `Close()`, `DialogResult`)  
+- Ereignisse, die **keine Logik oder Datenmanipulation** enthalten
+
+❌ Vermeide im Code-Behind:
+- Geschäftslogik
+- Zugriff auf Models
+- direkte Button-Click-Handler
+
+---
+
+📌 **Fazit:**  
+Die Views sollen **nur anzeigen**, was das ViewModel bereitstellt. Das hält die UI einfach, testbar und vom Verhalten getrennt. Der Code-Behind bleibt minimal und konzentriert sich nur auf rein visuelle Details.
