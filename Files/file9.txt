@@ -1,0 +1,188 @@
+ — it helps a lot! From what I can see, your project structure in Visual Studio looks great and well-organized. You're almost done! You’ve already added TestSummaryControl.xaml and its .cs code-behind, which is perfect.
+
+Let me walk you through exactly what to do step by step from here, tailored to your project structure (which already includes folders like UI/TestSummary/ and ViewModels/).
+
+
+---
+
+✅ GOAL
+
+Display a test result summary (Passed, Failed, Total) in your main window using MVVM and your new TestSummaryControl.
+
+
+---
+
+✅ 1. Confirm/ViewModel Exists: TestSummaryViewModel.cs
+
+Create this in:
+📁 NeuUITest/ViewModels/TestSummaryViewModel.cs
+
+using NeuUITest.Kern;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+
+namespace NeuUITest.ViewModels
+{
+    public class TestSummaryViewModel : INotifyPropertyChanged
+    {
+        private int _passedCount;
+        private int _failedCount;
+        private int _totalCount;
+
+        public int PassedCount
+        {
+            get => _passedCount;
+            private set { _passedCount = value; OnPropertyChanged(); }
+        }
+
+        public int FailedCount
+        {
+            get => _failedCount;
+            private set { _failedCount = value; OnPropertyChanged(); }
+        }
+
+        public int TotalCount
+        {
+            get => _totalCount;
+            private set { _totalCount = value; OnPropertyChanged(); }
+        }
+
+        public void UpdateFromResults(ObservableCollection<TestResult> results)
+        {
+            PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+            FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+            TotalCount = PassedCount + FailedCount;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+}
+
+
+---
+
+✅ 2. Add to MainMainWindow.cs
+
+Open 📄 MainMainWindow.cs and update the constructor like this:
+
+public class MainMainWindow : MainWindowBase
+{
+    public BrowseDllMainWindow BrowseDllViewModel { get; }
+    public RunTestsMainWindow RunTestsViewModel { get; }
+    public TestSummaryViewModel TestSummaryViewModel { get; }
+
+    public ObservableCollection<string> ConsoleOutput { get; } = new();
+    public ObservableCollection<TestResult> SummaryResults { get; } = new();
+
+    public MainMainWindow()
+    {
+        BrowseDllViewModel = new BrowseDllMainWindow();
+        TestSummaryViewModel = new TestSummaryViewModel();
+        RunTestsViewModel = new RunTestsMainWindow(
+            BrowseDllViewModel, ConsoleOutput, SummaryResults,
+            new TestExecutionService(), TestSummaryViewModel);
+    }
+}
+
+
+---
+
+✅ 3. Update RunTestsMainWindow.cs to Notify ViewModel
+
+Make sure constructor includes the TestSummaryViewModel:
+
+private readonly TestSummaryViewModel _summaryViewModel;
+
+public RunTestsMainWindow(..., TestSummaryViewModel summaryViewModel)
+{
+    ...
+    _summaryViewModel = summaryViewModel;
+}
+
+In RunTestsAsync(), after loading results:
+
+_summaryResults.Clear();
+foreach (var result in results)
+{
+    _consoleOutput.Add(result.Message);
+    if (result.Status != TestResultStatus.Info)
+        _summaryResults.Add(result);
+}
+_summaryViewModel.UpdateFromResults(_summaryResults);
+
+
+---
+
+✅ 4. Design TestSummaryControl.xaml
+
+You already have this file in UI/TestSummary/. Now insert the following XAML if it's not already there:
+
+<UserControl x:Class="NeuUITest.UI.TestSummary.TestSummaryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="Auto" Width="Auto">
+    <StackPanel Orientation="Horizontal" Margin="10">
+        <TextBlock Text="✔ Passed: " FontWeight="Bold" Margin="0,0,5,0"/>
+        <TextBlock Text="{Binding PassedCount}" Foreground="Green" Margin="0,0,15,0"/>
+
+        <TextBlock Text="❌ Failed: " FontWeight="Bold" Margin="0,0,5,0"/>
+        <TextBlock Text="{Binding FailedCount}" Foreground="Red" Margin="0,0,15,0"/>
+
+        <TextBlock Text="📊 Total: " FontWeight="Bold" Margin="0,0,5,0"/>
+        <TextBlock Text="{Binding TotalCount}" Foreground="Black"/>
+    </StackPanel>
+</UserControl>
+
+
+---
+
+✅ 5. Show Control in MainWindow.xaml
+
+In MainWindow.xaml, add the following inside <Grid> above the ListBoxes, after defining your namespaces:
+
+Step A: Add this namespace at the top:
+
+xmlns:controls="clr-namespace:NeuUITest.UI.TestSummary"
+
+Step B: Insert control into layout:
+
+<controls:TestSummaryControl DataContext="{Binding TestSummaryViewModel}" Margin="0,0,0,10"/>
+
+You can place this between the top buttons and the ListBox like:
+
+<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+    <Button Content="Browse DLL" Width="100" Command="{Binding BrowseDllViewModel.BrowseDllCommand}" />
+    <TextBox Text="{Binding BrowseDllViewModel.DllPath}" Width="600" Margin="10,0" IsReadOnly="True"/>
+    <Button Content="Run Tests" Width="100" Command="{Binding RunTestsViewModel.RunTestsCommand}" Margin="10,0,0,0" />
+</StackPanel>
+
+<!-- NEW SUMMARY CONTROL -->
+<controls:TestSummaryControl DataContext="{Binding TestSummaryViewModel}" Margin="0,0,0,10"/>
+
+<ListBox Grid.Row="1" ItemsSource="{Binding ConsoleOutput}" ... />
+
+
+---
+
+🎉 You're Done!
+
+Now your TestSummaryControl will:
+
+Show live test summary.
+
+Be fully decoupled from the view via MVVM.
+
+Be reusable and testable on its own!
+
+
+Let me know if you want to:
+
+Show a chart or progress bar inside the summary.
+
+Add unit tests for the summary viewmodel.
+
+
