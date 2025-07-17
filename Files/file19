@@ -101,3 +101,53 @@ In MVVM sollte die Logik **möglichst** im ViewModel bleiben.
 
 📌 **Fazit:**  
 Die Views sollen **nur anzeigen**, was das ViewModel bereitstellt. Das hält die UI einfach, testbar und vom Verhalten getrennt. Der Code-Behind bleibt minimal und konzentriert sich nur auf rein visuelle Details.
+
+
+---
+
+## 🧩 Projekt erweitern im MVVM-Stil – am Beispiel "About"
+
+Wenn du eine neue Funktionalität (z. B. ein neues Fenster oder eine neue UI-Komponente) hinzufügen möchtest, folge dieser Struktur:
+
+### Beispiel: "About"-Fenster (App-Informationen anzeigen)
+
+1. **Model anlegen (optional)**
+   - ✏️ Falls nötig, erstelle ein neues Datenmodell unter `Kern/` (z. B. `ProgramInfo.cs`), um relevante Daten wie Name, Version, Autor etc. bereitzustellen.
+   - ✅ Modelle enthalten **nur Daten**, keine Logik.
+
+2. **ViewModel erstellen**
+   - 📁 Lege ein neues ViewModel unter `ViewModels/` an (z. B. `MainAboutWindow.cs`).
+   - Dieses ViewModel lädt die Daten (z. B. von `ProgramInfo`) und stellt sie als `public string`-Properties für das Binding bereit.
+   - Falls Interaktionen nötig sind (z. B. ein Button in der View), erstelle eine `RelayCommand`-Instanz.
+
+3. **View (XAML) erstellen**
+   - 📁 Im Ordner `UI/` legst du eine neue `Window`- oder `UserControl`-Datei an (z. B. `AboutWindow.xaml`).
+   - Definiere das Layout mit `TextBlock`, `StackPanel`, etc.
+   - Weise das passende ViewModel als `DataContext` zu (manuell im Code-Behind oder via Binding).
+
+4. **Code-Behind minimal halten**
+   - Nur das nötigste wie `InitializeComponent()` und ggf. `ShowDialog()` (z. B. über einen Service) gehört in die `.xaml.cs`-Datei.
+   - **Keine Datenlogik oder UI-Logik dort!**
+
+5. **Service zur Anzeige (optional)**
+   - Um UI-Aktionen vom ViewModel auszuführen (z. B. Fenster öffnen), implementiere ein Interface wie `IWindowService` im Ordner `Kern/Services`.
+   - Die konkrete Implementierung (`WindowService`) kümmert sich dann darum, das Fenster zu öffnen.
+
+6. **Integration im Haupt-ViewModel**
+   - In `MainMainWindow.cs` oder dem zuständigen ViewModel registrierst du dein neues Sub-ViewModel (z. B. `AboutViewModel = new AboutAboutWindow(...)`)
+   - Die UI (z. B. ein Button) bindet sich an einen `ShowAboutCommand` im ViewModel.
+
+---
+
+### 🔁 Wiederverwendung für andere Funktionen
+
+Folge für **jede neue Funktion oder Ansicht** demselben Schema:
+
+> 🔹 Model → 🔹 ViewModel → 🔹 View → 🔹 ggf. Service → 🔹 Command-Bindings
+
+So bleibt die Architektur konsistent, testbar und leicht erweiterbar.
+
+---
+
+✅ **Tipp:**  
+Teile Logik von ViewModels in Services aus, wenn sie wiederverwendet werden oder nicht direkt zur Darstellung gehören.
