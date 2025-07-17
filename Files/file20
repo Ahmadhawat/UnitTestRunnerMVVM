@@ -1,0 +1,208 @@
+# 🧪 NeuUITest – Beispielprojekt für MVVM in WPF
+
+**NeuUITest** ist eine moderne WPF-Anwendung zur Ausführung und Visualisierung von .NET-Unit-Tests.  
+Gleichzeitig dient dieses Projekt als **praxisnahes Beispiel**, wie man die **MVVM-Architektur (Model–View–ViewModel)** sauber und effektiv in WPF-Anwendungen implementiert.
+
+---
+
+## 🎯 Ziel dieses Projekts
+
+✅ Zeigt die korrekte Trennung von Logik und UI mit MVVM  
+✅ Unterstützt das asynchrone Ausführen von Unit-Tests  
+✅ Visualisiert **Test-Ausgaben und Ergebnisse live**
+
+---
+
+## ❓ Was ist MVVM?
+
+### MVVM = **Model – View – ViewModel**
+
+| Ebene         | Aufgabe                                                                 |
+|---------------|-------------------------------------------------------------------------|
+| **Model**     | Stellt Datenstrukturen & Anwendungslogik bereit                         |
+| **View**      | Präsentationsebene (XAML), bindet an ViewModel, keine Logik             |
+| **ViewModel** | Vermittelt zwischen View und Model, enthält Befehle und UI-Zustände     |
+
+---
+
+### Warum MVVM?
+
+- ✅ Trennung von UI und Logik
+- ✅ Einfach zu testen und zu warten
+- ✅ Unterstützt Data Binding und Commands
+- ✅ Keine Logik im Code-Behind notwendig
+- ✅ Erleichtert Teamarbeit (UI-Designer & Entwickler getrennt)
+
+---
+
+## 🗂️ Projektstruktur & Bedeutung der Ordner
+
+Das Projekt ist strikt nach MVVM-Prinzipien strukturiert:
+
+---
+
+### `Helpers/` (Hilfsklassen)
+
+Dieser Ordner enthält allgemeine Hilfsklassen, die mehrfach in ViewModels verwendet werden – insbesondere für MVVM-typische Infrastruktur.
+
+- **`RelayCommand.cs`**  
+  Diese Klasse implementiert das `ICommand`-Interface und ermöglicht es, Methoden aus dem ViewModel an die Benutzeroberfläche zu binden.  
+  Sie unterstützt sowohl **synchron** als auch **asynchron** ausgeführte Befehle und ersetzt klassische Event-Handler in der UI.
+
+🔍 **Warum ist das wichtig?**  
+Im MVVM kommuniziert die UI nicht direkt mit dem Code, sondern über **Commands**. `RelayCommand` bietet eine flexible Möglichkeit, beliebige Aktionen an Schaltflächen, Menüpunkte usw. zu binden.
+
+🧠 **Nutzen:** Trennung von UI und Logik durch Commands statt Event-Handler.
+
+---
+
+### `Kern/` (Model)
+
+Hier liegt die Geschäftslogik und Datenstruktur.
+
+- **`TestResult.cs`**  
+  Modell für ein Testergebnis inkl. Statusfarbe für UI.
+
+- **`TestRunner.cs`**  
+  Führt `testhost.console.exe` aus, liest und parst die Ausgabe asynchron.
+
+- **`ProgramInfo.cs`**  
+  Enthält Metadaten wie App-Name, Version und Autor.
+
+🧠 **Nutzen:** Reine Logik- und Datenklassen – völlig unabhängig von UI. Ideal testbar und wiederverwendbar.
+
+---
+
+### `Services/` (Service-Schicht)
+
+Dient zur Abstraktion von externen Vorgängen oder UI-nahem Verhalten.
+
+- **Interfaces:**  
+  - `ITestExecutionService.cs`: Abstraktion der Testlogik  
+  - `IWindowService.cs`: Zeigt Fenster (z. B. About-Dialog)
+
+- **Implementierungen:**  
+  - `TestExecutionService.cs`: Nutzt `TestRunner`, um Tests auszuführen  
+  - `WindowService.cs`: Öffnet das About-Fenster
+
+🧠 **Nutzen:** ViewModels bleiben frei von direkter UI-Interaktion.
+
+---
+
+### `UI/` (View)
+
+Dieser Ordner enthält die **grafischen Benutzeroberflächen** der Anwendung – vollständig in **XAML** definiert.
+
+💡 Die Views sind über **DataBindings** mit den ViewModels verbunden. Die Steuerung erfolgt durch Properties und Commands aus dem ViewModel.  
+⚠️ **Wichtig:** In einer sauberen MVVM-Architektur gehört keine Logik in den Code-Behind (`.xaml.cs`) – alles wird über **Bindings** gelöst.
+
+#### Enthaltene Views:
+
+- **`MainWindow.xaml`**  
+  Hauptfenster der Anwendung. Beinhaltet die Steuerung für das Laden einer DLL, das Starten von Tests, Konsolenausgabe und Testergebnis-Zusammenfassung.
+
+- **`AboutWindow.xaml`**  
+  Zeigt App-Informationen wie Name, Version und Autor – gebunden an passendes ViewModel (`MainAboutWindow`).
+
+- **`TestSummaryControl.xaml`**  
+  Wiederverwendbare `UserControl`, die den Teststatus grafisch zusammenfasst (Bestanden / Fehlgeschlagen / Gesamt).
+
+---
+
+### Umgang mit Code-Behind (`.xaml.cs`)
+
+Im MVVM sollte die Logik **möglichst** im ViewModel bleiben.  
+🔓 Code-Behind ist **nicht grundsätzlich verboten**, aber:
+
+✅ Verwende Code-Behind nur für:
+
+- `InitializeComponent()`
+- UI-spezifische Visuals (z. B. Animationen, Fokus setzen)
+- Fenstersteuerung (`ShowDialog()`, `Close()`, `DialogResult`)
+- Ereignisse, die **keine Logik oder Datenmanipulation** enthalten
+
+🚫 Vermeide in Code-Behind:
+
+- Geschäftslogik
+- Zugriffe auf Models
+- direkte Button-Click-Handler
+
+🧠 **Nutzen:**
+- Die Views zeigen **ausschließlich** Daten an, die vom ViewModel über Bindings bereitgestellt werden.
+- Sie enthalten **keine Logik**, was die Wartbarkeit, Testbarkeit und Wiederverwendbarkeit verbessert.
+- Designer:innen können die Views gestalten, ohne sich mit Logik befassen zu müssen.
+- Die UI soll **nur anzeigen**, was das ViewModel bereitstellt. Das hält die UI einfach, testbar und vom Verhalten getrennt.
+
+---
+
+### `ViewModels/` (ViewModel)
+
+Verbindet View ⇄ Model, verarbeitet Benutzerinteraktionen und enthält UI-Zustände.
+
+#### 🔹 Basisklasse:
+
+- **`MainWindowBase.cs`**  
+  Implementiert `INotifyPropertyChanged`
+
+#### 🔹 Haupt-ViewModel:
+
+- **`MainMainWindow.cs`**  
+  Komponiert alle Sub-ViewModels
+
+#### 🔹 Sub-ViewModels:
+
+- `RunTestsMainWindow.cs` → Führt Tests aus, aktualisiert UI  
+- `BrowseDllMainWindow.cs` → Öffnet Datei-Dialog für DLL  
+- `MainTestSummaryControl.cs` → Zählt Passed/Failed/Total  
+- `AboutAboutWindow.cs` → Steuert das About-Fenster  
+- `MainAboutWindow.cs` → Stellt AppInfo bereit
+
+🧠 **Nutzen:**  
+Alle ViewModels sind lose gekoppelt, testbar, wiederverwendbar und UI-unabhängig.
+
+---
+
+## 🧩 Projekt erweitern im MVVM-Stil – am Beispiel "About"
+
+Wenn du eine neue Funktionalität (z. B. ein neues Fenster oder eine neue UI-Komponente) hinzufügen möchtest, folge dieser Struktur:
+
+### ✅ Beispiel: "About"-Fenster (App-Informationen anzeigen)
+
+1. **🧱 Model anlegen (optional)**  
+   - Falls nötig, erstelle ein neues Datenmodell unter `Kern/` (z. B. `ProgramInfo.cs`), um relevante Daten wie Name, Version, Autor etc. bereitzustellen.  
+   - Modelle enthalten **nur Daten**, keine Logik.
+
+2. **🧠 ViewModel erstellen**  
+   - Lege ein neues ViewModel unter `ViewModels/` an (z. B. `MainAboutWindow.cs`).
+   - Dieses ViewModel lädt die Daten (z. B. von `ProgramInfo`) und stellt sie als `public string`-Properties für das Binding bereit.
+   - Falls Interaktionen nötig sind (z. B. ein Button in der View), erstelle eine `RelayCommand`-Instanz.
+
+3. **🪟 View (XAML) erstellen**  
+   - In `UI/` legst du eine neue `Window`- oder `UserControl`-Datei an (z. B. `AboutWindow.xaml`).
+   - Definiere das Layout mit `TextBlock`, `StackPanel`, etc.
+   - Weise das passende ViewModel als `DataContext` zu (manuell im Code-Behind oder via Binding).
+
+4. **🔧 Code-Behind minimal halten**  
+   - Nur das nötigste wie `InitializeComponent()` und ggf. `ShowDialog()` (z. B. über einen Service) gehört in die `.xaml.cs`-Datei.  
+   - **Keine Datenlogik oder UI-Logik dort!**
+
+5. **🛠️ Service zur Anzeige (optional)**  
+   - Um UI-Aktionen vom ViewModel auszuführen (z. B. Fenster öffnen), implementiere ein Interface wie `IWindowService` im Ordner `Kern/Services`.  
+   - Die konkrete Implementierung (`WindowService`) kümmert sich dann darum, das Fenster zu öffnen.
+
+6. **🔁 Integration im Haupt-ViewModel**  
+   - In `MainMainWindow.cs` oder dem zuständigen ViewModel registrierst du dein neues Sub-ViewModel (z. B. `AboutViewModel = new AboutAboutWindow(...)`)  
+   - Die UI (z. B. ein Button) bindet sich an einen `ShowAboutCommand` im ViewModel.
+
+---
+
+### ♻️ Wiederverwendung für andere Funktionen
+
+Folge für **jede neue Funktion oder Ansicht** demselben Schema:
+
+> **Model → ViewModel → View → ggf. Service → Command-Bindings**
+
+So bleibt die Architektur konsistent, testbar und leicht erweiterbar.
+
+✅ **Tipp:**  
+Teile Logik von ViewModels in Services aus, wenn sie wiederverwendbar werden oder nicht direkt zur Darstellung gehören.
