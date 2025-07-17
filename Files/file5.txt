@@ -1,0 +1,131 @@
+No problem — let’s break it down simply, step by step, and use your current structure and terminology. You’re using WPF with MVVM, and your XAML lives in MainWindow.xaml (not a "Views" folder), so we’ll follow your style exactly.
+
+
+---
+
+🎯 Goal
+
+You want to add a new XAML UI screen (like another window) and keep MVVM structure — just like you already did with MainWindow.xaml and its ViewModel.
+
+Let’s walk through an example:
+
+
+---
+
+✅ STEP 1: Add a New XAML File (New Window)
+
+In Visual Studio:
+
+1. Right-click the project → Add → Window (WPF)
+
+
+2. Name it: AboutWindow.xaml
+
+
+
+Visual Studio will create:
+
+AboutWindow.xaml
+
+AboutWindow.xaml.cs (code-behind)
+
+
+
+---
+
+✅ STEP 2: Create the ViewModel
+
+Inside your ViewModels folder:
+
+Create a new file called:
+
+📄 AboutWindowViewModel.cs
+
+using NeuUITest.ViewModels;
+
+namespace NeuUITest.ViewModels
+{
+    public class AboutWindowViewModel : MainWindowBase
+    {
+        public string AppName => "Unit Test Runner";
+        public string Version => "1.0.0";
+        public string Author => "Your Name";
+    }
+}
+
+This holds the data for your About window.
+
+
+---
+
+✅ STEP 3: Connect XAML to ViewModel
+
+Open your new AboutWindow.xaml and change it like this:
+
+<Window x:Class="NeuUITest.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:NeuUITest.ViewModels"
+        Title="About" Height="200" Width="400">
+
+    <Window.DataContext>
+        <vm:AboutWindowViewModel />
+    </Window.DataContext>
+
+    <StackPanel Margin="20">
+        <TextBlock Text="{Binding AppName}" FontSize="24" FontWeight="Bold" />
+        <TextBlock Text="{Binding Version}" FontSize="16" Margin="0,10,0,0" />
+        <TextBlock Text="{Binding Author}" FontSize="16" />
+    </StackPanel>
+</Window>
+
+Now it shows app info using your ViewModel.
+
+
+---
+
+✅ STEP 4: Open This Window from Main UI
+
+In MainMainWindow.cs ViewModel, add this:
+
+public ICommand ShowAboutCommand { get; }
+
+public MainMainWindow()
+{
+    // Other init...
+    ShowAboutCommand = new RelayCommand(ShowAboutWindow);
+}
+
+private void ShowAboutWindow()
+{
+    var win = new AboutWindow();
+    win.ShowDialog(); // opens as a popup
+}
+
+Then in MainWindow.xaml, add a new button:
+
+<Button Content="About" Command="{Binding ShowAboutCommand}" Width="100" Margin="10,0,0,0"/>
+
+Put it next to your existing buttons (like "Browse DLL" or "Run Tests").
+
+
+---
+
+✅ DONE!
+
+Now your app has:
+
+A new screen (AboutWindow.xaml)
+
+A matching ViewModel (AboutWindowViewModel.cs)
+
+A button to open it from the main window
+
+Still using MVVM structure ✅
+
+
+
+---
+
+Would you like help making the second window show different content (like logs, settings, etc.) instead? I can adjust the example to your real use case.
+
