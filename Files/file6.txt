@@ -1,0 +1,209 @@
+Great! Below is a complete and clean MVVM-compliant integration of:
+
+1. 🪟 About Window
+
+
+2. 🧩 Test Summary UserControl
+
+
+3. 📄 Settings Page (navigated via Frame)
+
+
+
+into your existing WPF project (NeuUITest).
+
+
+---
+
+✅ 1. 🪟 About Window Integration
+
+📁 File: Views/AboutWindow.xaml
+
+<Window x:Class="NeuUITest.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About" Height="200" Width="400" WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <TextBlock Text="{Binding Info}" 
+                   TextWrapping="Wrap" 
+                   FontSize="16" 
+                   TextAlignment="Center"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center" />
+    </Grid>
+</Window>
+
+📁 File: Views/AboutWindow.xaml.cs
+
+using System.Windows;
+
+namespace NeuUITest.Views
+{
+    public partial class AboutWindow : Window
+    {
+        public AboutWindow(object viewModel)
+        {
+            InitializeComponent();
+            DataContext = viewModel;
+        }
+    }
+}
+
+📁 File: ViewModels/AboutViewModel.cs
+
+namespace NeuUITest.ViewModels
+{
+    public class AboutViewModel : MainWindowBase
+    {
+        public string Info => "NeuUITest\nVersion 1.0\nDeveloped using WPF and MVVM.";
+    }
+}
+
+🧩 Add Command in MainMainWindow.cs
+
+public ICommand ShowAboutCommand => new RelayCommand(ShowAbout);
+
+private void ShowAbout()
+{
+    var aboutVM = new AboutViewModel();
+    var win = new Views.AboutWindow(aboutVM);
+    win.ShowDialog();
+}
+
+🧪 Button in MainWindow.xaml
+
+<Button Content="About" Command="{Binding ShowAboutCommand}" Width="80" Margin="5"/>
+
+
+---
+
+✅ 2. 🧩 TestSummaryControl as UserControl
+
+📁 File: Views/TestSummaryControl.xaml
+
+<UserControl x:Class="NeuUITest.Views.TestSummaryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <ListBox ItemsSource="{Binding SummaryResults}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Message}" Foreground="{Binding StatusBrush}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>
+
+📁 File: Views/TestSummaryControl.xaml.cs
+
+using System.Windows.Controls;
+
+namespace NeuUITest.Views
+{
+    public partial class TestSummaryControl : UserControl
+    {
+        public TestSummaryControl()
+        {
+            InitializeComponent();
+        }
+    }
+}
+
+🧪 Use in MainWindow.xaml
+
+Ensure namespace:
+
+xmlns:views="clr-namespace:NeuUITest.Views"
+
+Then embed:
+
+<views:TestSummaryControl DataContext="{Binding RunTestsViewModel}" Grid.Row="2" />
+
+
+---
+
+✅ 3. 📄 Settings Page (with Frame Navigation)
+
+📁 File: Views/SettingsPage.xaml
+
+<Page x:Class="NeuUITest.Views.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Settings">
+    <Grid Margin="10">
+        <TextBlock Text="Settings Coming Soon..." FontSize="20" />
+    </Grid>
+</Page>
+
+📁 File: Views/SettingsPage.xaml.cs
+
+using System.Windows.Controls;
+
+namespace NeuUITest.Views
+{
+    public partial class SettingsPage : Page
+    {
+        public SettingsPage()
+        {
+            InitializeComponent();
+        }
+    }
+}
+
+🧩 Update MainWindow.xaml (add Frame)
+
+Inside <Grid> add:
+
+<Frame x:Name="MainFrame" Grid.Row="3" Margin="0,10,0,0" />
+<Button Content="Settings" Command="{Binding OpenSettingsCommand}" Width="80" Margin="5"/>
+
+> 💡 Add another RowDefinition if needed:
+
+
+
+<RowDefinition Height="*" />
+
+📁 In MainMainWindow.cs (ViewModel)
+
+public ICommand OpenSettingsCommand => new RelayCommand(OpenSettings);
+
+private void OpenSettings()
+{
+    var mainWindow = App.Current.MainWindow;
+    var frame = LogicalTreeHelper.FindLogicalNode(mainWindow, "MainFrame") as Frame;
+    frame?.Navigate(new Views.SettingsPage());
+}
+
+
+---
+
+🧱 Final Project Structure (Additions)
+
+NeuUITest/
+├── Views/
+│   ├── AboutWindow.xaml / .cs
+│   ├── SettingsPage.xaml / .cs
+│   └── TestSummaryControl.xaml / .cs
+├── ViewModels/
+│   └── AboutViewModel.cs
+
+
+---
+
+✅ All MVVM Rules Respected
+
+Views are passive.
+
+Commands and navigation logic live in ViewModels.
+
+Reusability encouraged via UserControls.
+
+Pages & Windows receive ViewModels via DI or constructor.
+
+
+
+---
+
+Would you like me to generate this as a .zip or .csproj scaffold for quick setup?
+
