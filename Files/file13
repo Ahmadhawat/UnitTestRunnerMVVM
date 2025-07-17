@@ -1,0 +1,83 @@
+Great — you're showing MainAboutWindow.cs, which currently just holds static text.
+Now we’ll rebuild it properly as a true MVVM ViewModel that includes:
+
+App metadata (AppName, Version, Author)
+
+A ShowAboutCommand that opens the About window
+
+All implemented cleanly, just like BrowseDllViewModel
+
+
+
+---
+
+✅ Full Replacement: MainAboutWindow.cs
+
+Place this in:
+
+📁 ViewModels/About/MainAboutWindow.cs
+
+using System.Windows.Input;
+using NeuUITest.Helpers;
+
+namespace NeuUITest.ViewModels.About
+{
+    public class MainAboutWindow : MainWindowBase
+    {
+        public string AppName => "Unit Test Runner";
+        public string Version => "0.0.1";
+        public string Author => "TT";
+
+        public ICommand ShowAboutCommand { get; }
+
+        public MainAboutWindow()
+        {
+            ShowAboutCommand = new RelayCommand(OpenAboutWindow);
+        }
+
+        private void OpenAboutWindow()
+        {
+            var window = new UI.About.AboutWindow();
+            window.ShowDialog(); // or .Show() for non-blocking
+        }
+    }
+}
+
+
+---
+
+✅ Why This Works
+
+Feature	Handled in Code
+
+Text (name/version/author)	Bound in XAML to properties (AppName, etc.)
+Button logic	Done via ShowAboutCommand
+UI opening logic	Inside OpenAboutWindow() method
+
+
+
+---
+
+✅ Update Your XAML (MainWindow.xaml)
+
+Make sure your About button uses:
+
+<Button Content="About"
+        Width="100"
+        Command="{Binding ShowAboutCommand}"
+        Margin="10,0,0,0" />
+
+
+---
+
+Let me know if you'd like to:
+
+Auto-close the About window after X seconds
+
+Add a "Copy Version Info" button
+
+Load version number from AssemblyInfo.cs dynamically
+
+
+You're building a solid MVVM-based app — very clean and scalable!
+
