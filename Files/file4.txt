@@ -1,0 +1,174 @@
+Great — adding another XAML view while keeping the MVVM structure is a clean and modular way to expand your WPF application. Here's how to correctly add a new XAML View and its corresponding ViewModel in MVVM style.
+
+
+---
+
+🧱 Step-by-Step: Adding a New MVVM-Structured XAML View
+
+Let’s assume you want to add a new page called AboutView, showing app version, author, etc.
+
+
+---
+
+✅ 1. Create a New View (XAML + Code-behind)
+
+In NeuUITest/Views/ (create this folder if it doesn't exist):
+
+📄 AboutView.xaml
+
+<UserControl x:Class="NeuUITest.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:NeuUITest.ViewModels">
+    <Grid Margin="20">
+        <StackPanel>
+            <TextBlock Text="Unit Test Runner" FontSize="24" FontWeight="Bold" />
+            <TextBlock Text="Version 1.0.0" FontSize="16" />
+            <TextBlock Text="Developed by You" FontSize="16" Margin="0,10,0,0" />
+        </StackPanel>
+    </Grid>
+</UserControl>
+
+This is a simple UserControl. You can also use Window or Page, but UserControl is most common in MVVM for swapping views inside a container (like a ContentControl).
+
+
+---
+
+✅ 2. Create the ViewModel
+
+In NeuUITest/ViewModels/, add:
+
+📄 AboutViewModel.cs
+
+namespace NeuUITest.ViewModels
+{
+    public class AboutViewModel : MainWindowBase
+    {
+        public string AppName => "Unit Test Runner";
+        public string Version => "1.0.0";
+        public string Author => "You";
+    }
+}
+
+If you want to bind these values dynamically, you can use properties with OnPropertyChanged, but constants are fine here.
+
+
+---
+
+✅ 3. Use the View in Your App
+
+Option A: Show in a separate Window
+
+If you want it in a separate popup window:
+
+📄 AboutWindow.xaml
+
+<Window x:Class="NeuUITest.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:NeuUITest.ViewModels"
+        Title="About" Height="200" Width="400">
+    <Window.DataContext>
+        <vm:AboutViewModel />
+    </Window.DataContext>
+
+    <views:AboutView />
+</Window>
+
+Then in a ViewModel (like MainMainWindow), add a command:
+
+public ICommand ShowAboutCommand { get; }
+
+public MainMainWindow()
+{
+    ShowAboutCommand = new RelayCommand(ShowAbout);
+    // ... other init
+}
+
+private void ShowAbout()
+{
+    var win = new Views.AboutWindow();
+    win.ShowDialog();
+}
+
+
+---
+
+Option B: Swap View Inside MainWindow (ContentControl)
+
+If your main window should switch between views, bind a CurrentViewModel:
+
+In MainMainWindow.cs:
+
+private object _currentViewModel;
+public object CurrentViewModel
+{
+    get => _currentViewModel;
+    set
+    {
+        _currentViewModel = value;
+        OnPropertyChanged();
+    }
+}
+
+public ICommand ShowAboutCommand { get; }
+
+public MainMainWindow()
+{
+    // Initial view
+    CurrentViewModel = RunTestsViewModel;
+
+    ShowAboutCommand = new RelayCommand(() => CurrentViewModel = new AboutViewModel());
+}
+
+Then in MainWindow.xaml:
+
+<Window ...>
+    <Window.DataContext>
+        <viewmodels:MainMainWindow />
+    </Window.DataContext>
+
+    <Grid>
+        <!-- Buttons -->
+        <Button Content="About" Command="{Binding ShowAboutCommand}" />
+
+        <!-- Main content swaps here -->
+        <ContentControl Content="{Binding CurrentViewModel}">
+            <ContentControl.Resources>
+                <DataTemplate DataType="{x:Type viewmodels:RunTestsMainWindow}">
+                    <!-- Existing test runner layout here -->
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type viewmodels:AboutViewModel}">
+                    <views:AboutView />
+                </DataTemplate>
+            </ContentControl.Resources>
+        </ContentControl>
+    </Grid>
+</Window>
+
+This allows your app to dynamically switch views inside one window while staying true to MVVM.
+
+
+---
+
+✅ Summary
+
+To add a new XAML view the MVVM way:
+
+1. Create a new UserControl for the UI.
+
+
+2. Create a matching ViewModel.
+
+
+3. Either:
+
+Show the view in a new window via Window.ShowDialog().
+
+Or bind the view into a ContentControl using DataTemplates.
+
+
+
+
+Let me know what kind of screen you're adding (e.g., settings, logs, help), and I can help scaffold it exactly.
+
