@@ -261,3 +261,124 @@ Deine MainMainWindow bleibt sauber und kümmert sich nicht um die Logik des Abou
 
 Wenn du möchtest, kann ich dir auch helfen, die Buttons im XAML entsprechend an das neue ViewModel zu binden. Sag einfach Bescheid!
 
+
+
+
+
+
+
+
+
+
+
+
+
+Perfect! Let's make your About window MVVM-compliant using Option 1: a clean service-based approach. Here's the complete working solution based on your existing structure.
+
+
+---
+
+✅ Step-by-Step MVVM-Compliant Refactor
+
+📁 1. Create the Interface: IWindowService.cs
+
+Create this file under a folder like Services:
+
+namespace NeuUITest.Services
+{
+    public interface IWindowService
+    {
+        void ShowAboutWindow();
+    }
+}
+
+
+---
+
+🛠️ 2. Implement the Service: WindowService.cs
+
+Also under Services:
+
+using NeuUITest.UI.About;
+
+namespace NeuUITest.Services
+{
+    public class WindowService : IWindowService
+    {
+        public void ShowAboutWindow()
+        {
+            var win = new AboutWindow();
+            win.ShowDialog();
+        }
+    }
+}
+
+
+---
+
+🧠 3. Update ViewModel: AboutAboutWindow.cs
+
+Modify your existing ViewModel so it uses the service and removes any direct ShowDialog:
+
+using System.Windows.Input;
+using NeuUITest.Helpers;
+using NeuUITest.Services;
+
+namespace NeuUITest.ViewModels.About
+{
+    public class AboutAboutWindow : MainWindowBase
+    {
+        public ICommand ShowAboutCommand { get; }
+
+        private readonly IWindowService _windowService;
+
+        public AboutAboutWindow(IWindowService windowService)
+        {
+            _windowService = windowService;
+            ShowAboutCommand = new RelayCommand(() => _windowService.ShowAboutWindow());
+        }
+    }
+}
+
+
+---
+
+🧷 4. Modify MainMainWindow.cs to Inject the Service
+
+This is where you pass the service into the ViewModel:
+
+using NeuUITest.Services; // Add this if not already there
+
+// In your MainMainWindow constructor:
+AboutViewModel = new About.AboutAboutWindow(new WindowService());
+
+
+---
+
+🪟 5. Update XAML Binding (if not done yet)
+
+In your MainWindow.xaml, make sure the button is bound like this:
+
+<Button Content="About" Width="100" Command="{Binding AboutViewModel.ShowAboutCommand}" Margin="10,0,0,0" />
+
+
+---
+
+✅ Final Result:
+
+No ShowDialog() in ViewModel ✅
+
+ICommand lives in ViewModel ✅
+
+Service handles UI logic ✅
+
+Fully MVVM compliant ✅
+
+
+
+---
+
+If you want to unit test your ViewModel, you can mock the IWindowService easily.
+
+Let me know if you'd like help with that or dependency injection (DI) setup!
+
