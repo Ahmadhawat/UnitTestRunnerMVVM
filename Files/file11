@@ -1,0 +1,74 @@
+Got it! You want to move the TestSummaryControl below the test result list — essentially, to the bottom of the window.
+
+Right now, your MainWindow.xaml uses this structure:
+
+<Grid.RowDefinitions>
+    <RowDefinition Height="Auto"/>    <!-- Toolbar -->
+    <RowDefinition Height="2*"/>      <!-- ConsoleOutput -->
+    <RowDefinition Height="2*"/>      <!-- SummaryResults -->
+</Grid.RowDefinitions>
+
+We’ll adjust this by adding a new row at the bottom for the test summary, like this:
+
+
+---
+
+✅ Step-by-Step Update to MainWindow.xaml
+
+🔁 1. Update RowDefinitions (add a 4th row):
+
+<Grid.RowDefinitions>
+    <RowDefinition Height="Auto"/>   <!-- Top Toolbar -->
+    <RowDefinition Height="2*"/>     <!-- Console Output -->
+    <RowDefinition Height="2*"/>     <!-- Summary Results -->
+    <RowDefinition Height="Auto"/>   <!-- 👈 Test Summary -->
+</Grid.RowDefinitions>
+
+
+---
+
+🧩 2. Move the TestSummaryControl into the new row:
+
+Place this after the two <ListBox> elements, like so:
+
+<!-- Terminal-style output -->
+<ListBox Grid.Row="1" ItemsSource="{Binding ConsoleOutput}" ... />
+
+<!-- Colored summary output -->
+<ListBox Grid.Row="2" ItemsSource="{Binding RunTestsViewModel.SummaryResults}" ... />
+
+<!-- ✅ Moved Summary Control to bottom -->
+<controls:TestSummaryControl 
+    Grid.Row="3"
+    Margin="0,10,0,0"
+    PassedCount="{Binding TestSummaryViewModel.PassedCount}"
+    FailedCount="{Binding TestSummaryViewModel.FailedCount}"
+    TotalCount="{Binding TestSummaryViewModel.TotalCount}" />
+
+
+---
+
+✅ Final Layout (Top-to-Bottom)
+
+Row	Content
+
+Row 0	Buttons (Browse, Run, About)
+Row 1	Console output (log)
+Row 2	Test results (summary list)
+Row 3	✅ TestSummaryControl (now at bottom)
+
+
+
+---
+
+Let me know if you'd like to:
+
+Center or stretch the summary at the bottom
+
+Add separator lines or styling
+
+Lock its size or fix it when window resizes
+
+
+Would you like me to generate the full cleaned-up XAML?
+
