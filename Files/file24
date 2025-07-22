@@ -1,0 +1,125 @@
+Let's modify your RunTestsAsync and UpdateFromResults logic to display structured test results (Test Name, Status, Duration) instead of raw console messages.
+
+
+---
+
+Step 1: Update TestResult Model
+
+We already defined TestResult with TestName, Status, Duration, and Message.
+Ensure your TestResultStatus enum includes:
+
+public enum TestResultStatus
+{
+    Info,
+    Passed,
+    Failed,
+    Summary
+}
+
+
+---
+
+Step 2: Modify RunTestsAsync
+
+Currently, your RunTestsAsync adds every raw line to _consoleOutput and _summaryResults. We will instead:
+
+Parse lines into structured TestResult objects.
+
+Add only structured results to _summaryResults.
+
+
+Here's the updated RunTestsAsync:
+
+private async Task RunTestsAsync()
+{
+    IsTestRunning = true;
+
+    var progress = new Progress<string>(line =>
+    {
+        // Display raw output (optional)
+        _consoleOutput.Add(line);
+        OnPropertyChanged(nameof(ConsoleOutput));
+
+        // Parse and store structured test results
+        var parsedResult = ParseLine(line);
+        if (parsedResult.Status == TestResultStatus.Passed || parsedResult.Status == TestResultStatus.Failed)
+        {
+            _summaryResults.Add(parsedResult);
+        }
+    });
+
+    var results = await _testExecutionService.RunTestsAsync(_browseDLLViewModel.DLLPath, progress);
+
+    _consoleOutput.Clear();
+    _summaryResults.Clear();
+
+    foreach (var result in results)
+    {
+        _consoleOutput.Add(result.Message);
+
+        if (result.Status == TestResultStatus.Passed || result.Status == TestResultStatus.Failed)
+        {
+            _summaryResults.Add(result);
+        }
+    }
+
+    _summaryViewModel.UpdateFromResults(_summaryResults);
+    OnPropertyChanged(nameof(SummaryResults));
+    OnPropertyChanged(nameof(ConsoleOutput));
+
+    IsTestRunning = false;
+}
+
+
+---
+
+Step 3: Modify UpdateFromResults
+
+In MainTestSummaryControl.cs, update UpdateFromResults to count Passed/Failed tests based on Status:
+
+public void UpdateFromResults(ObservableCollection<TestResult> results)
+{
+    PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+    FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+    TotalCount = PassedCount + FailedCount;
+}
+
+
+---
+
+Step 4: Displaying Structured Results in UI
+
+Your UI can now bind to SummaryResults (which is ObservableCollection<TestResult>) and show columns like:
+
+<DataGrid ItemsSource="{Binding SummaryResults}" AutoGenerateColumns="False">
+    <DataGrid.Columns>
+        <DataGridTextColumn Header="Test Name" Binding="{Binding TestName}" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" />
+        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" />
+    </DataGrid.Columns>
+</DataGrid>
+
+
+---
+
+Step 5: Testing It
+
+After these changes:
+
+The console output panel will still show raw text.
+
+The summary panel (DataGrid) will show structured results:
+
+Test Name       Status   Duration
+---------------------------------
+TestAddPunkt    Passed   1 ms
+TestFindPunkt   Failed   792 ms
+
+
+
+---
+
+Next Step
+
+Would you like me to generate a refactored version of your TestRunner.cs (including RunTestsAsync and ParseLine) as a single, clean file that you can copy-paste directly?
+
