@@ -1,0 +1,117 @@
+Let's enhance the ParseLine method to extract structured data such as Test Name, Status, and Duration from each line of the output. We'll introduce a TestResult class (if not already defined) with appropriate fields and improve the parsing logic.
+
+
+---
+
+Improved Code
+
+Step 1: Extend the TestResult Class
+
+Add the following properties if your TestResult class doesn't have them already:
+
+public class TestResult
+{
+    public string TestName { get; set; }
+    public TestResultStatus Status { get; set; }
+    public string Duration { get; set; }
+    public string Message { get; set; }
+}
+
+
+---
+
+Step 2: Improved ParseLine Method
+
+Here's the enhanced version of ParseLine:
+
+private static TestResult ParseLine(string line)
+{
+    var result = new TestResult
+    {
+        Message = line,
+        Status = TestResultStatus.Info
+    };
+
+    // Check for Passed tests
+    if (line.StartsWith("Passed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Passed;
+        ExtractTestInfo(line, result);
+    }
+    // Check for Failed tests
+    else if (line.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Failed;
+        ExtractTestInfo(line, result);
+    }
+    // Summary lines
+    else if (line.StartsWith("Total tests", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Summary;
+    }
+    else if (line.Contains("Test Run Successful", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Passed;
+    }
+    else if (line.Contains("Test Run Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Failed;
+    }
+
+    return result;
+}
+
+
+---
+
+Step 3: Helper Method to Extract Test Name and Duration
+
+private static void ExtractTestInfo(string line, TestResult result)
+{
+    // Example line: "Passed TestAddPunkt [1 ms]"
+    // Remove "Passed " or "Failed " prefix
+    var parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length >= 2)
+    {
+        result.TestName = parts[1];
+    }
+
+    // Extract duration inside brackets [1 ms]
+    var durationStart = line.IndexOf('[');
+    var durationEnd = line.IndexOf(']');
+    if (durationStart >= 0 && durationEnd > durationStart)
+    {
+        result.Duration = line.Substring(durationStart + 1, durationEnd - durationStart - 1);
+    }
+}
+
+
+---
+
+Step 4: Displaying Structured Results
+
+After parsing, you will now have results with:
+
+TestName
+
+Status
+
+Duration
+
+Message
+
+
+For example:
+
+Test Name       Status   Duration
+---------------------------------
+TestAddPunkt    Passed   1 ms
+TestFindPunkt   Failed   792 ms
+
+
+---
+
+Next Step
+
+Would you like me to rewrite your RunTestsAsync and _summaryViewModel.UpdateFromResults logic so that the UI displays this structured data (test name, status, and duration) in a nice table format instead of raw messages?
+
