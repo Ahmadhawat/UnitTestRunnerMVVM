@@ -1,0 +1,850 @@
+I see where the confusion is coming from. Your current code is parsing each output line but does not properly count the tests because ParseLine does not extract individual test results (with names and durations), and your _summaryResults collection mixes summary lines with individual test outputs.
+
+Let's fix this step by step so you can get accurate total, passed, and failed test counts.
+
+
+---
+
+Step-by-Step Fix
+
+1. Enhance ParseLine
+
+Update ParseLine to detect individual test result lines (like Passed TestAddPunkt [1 ms]) and ignore summary lines (like Total tests: 3).
+
+Replace your ParseLine method with this:
+
+private static TestResult ParseLine(string line)
+{
+    var result = new TestResult
+    {
+        Message = line,
+        Status = TestResultStatus.Info
+    };
+
+    // Check for individual Passed test
+    if (line.StartsWith("Passed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Passed;
+        ExtractTestInfo(line, result);
+    }
+    // Check for individual Failed test
+    else if (line.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Failed;
+        ExtractTestInfo(line, result);
+    }
+    // Check for summary line
+    else if (line.StartsWith("Total tests", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Summary;
+    }
+    else if (line.Contains("Test Run Successful", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Passed;
+    }
+    else if (line.Contains("Test Run Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        result.Status = TestResultStatus.Failed;
+    }
+
+    return result;
+}
+
+
+---
+
+2. Add ExtractTestInfo Helper
+
+This method will extract test name and duration:
+
+private static void ExtractTestInfo(string line, TestResult result)
+{
+    // Example line: "Passed TestAddPunkt [1 ms]"
+    var parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length >= 2)
+        result.TestName = parts[1];
+
+    // Extract duration if present in [ ]
+    int start = line.IndexOf('[');
+    int end = line.IndexOf(']');
+    if (start >= 0 && end > start)
+        result.Duration = line.Substring(start + 1, end - start - 1);
+}
+
+
+---
+
+3. Modify RunTestsAsync
+
+Change your RunTestsAsync method so that it only adds actual Passed/Failed tests to _summaryResults (ignoring summary or info lines).
+
+Update this block:
+
+foreach (var result in results)
+{
+    _consoleOutput.Add(result.Message);
+
+    // Only add Passed/Failed results
+    if (result.Status == TestResultStatus.Passed || result.Status == TestResultStatus.Failed)
+    {
+        _summaryResults.Add(result);
+    }
+}
+_summaryViewModel.UpdateFromResults(_summaryResults);
+
+
+---
+
+4. Fix UpdateFromResults
+
+In MainTestSummaryControl.cs, ensure this method counts correctly:
+
+public void UpdateFromResults(ObservableCollection<TestResult> results)
+{
+    PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+    FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+    TotalCount = PassedCount + FailedCount;
+}
+
+
+---
+
+What Will This Do?
+
+ParseLine will identify individual tests (Passed/Failed).
+
+_summaryResults will now only contain real tests.
+
+UpdateFromResults will show the correct total, passed, and failed test counts.
+
+
+
+---
+
+Next Step for You
+
+Would you like me to generate the final cleaned-up TestRunner.cs file (including RunTestsAsync, ParseLine, ExtractTestInfo) so you can copy-paste it directly without confusion?
+
+
+Here is the final, cleaned-up version of TestRunner.cs with all improvements included. This version ensures proper parsing of test results and accurate counting of total, passed, and failed tests.
+
+
+---
+
+Final TestRunner.cs
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace NeuUITest.Kern
+{
+    public class TestRunner
+    {
+        // Path to vstest.console.exe (adjust as needed)
+        private readonly string exePath = 
+            @"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\Extensions\TestPlatform\vstest.console.exe";
+
+        /// <summary>
+        /// Runs tests using vstest.console and parses the results.
+        /// </summary>
+        public async Task<List<TestResult>> RunTestsAsync(string dllPath, IProgress<string> progress)
+        {
+            var results = new List<TestResult>();
+
+            if (!File.Exists(dllPath) || string.IsNullOrWhiteSpace(dllPath))
+                throw new FileNotFoundException("Invalid DLL path.");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = $"\"{dllPath}\" --InIsolation",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            var process = new Process { StartInfo = psi };
+
+            // Capture normal output
+            process.OutputDataReceived += (sender, args) =>
+            {
+                if (!string.IsNullOrWhiteSpace(args.Data))
+                {
+                    progress.Report(args.Data);
+                    results.Add(ParseLine(args.Data));
+                }
+            };
+
+            // Capture errors
+            process.ErrorDataReceived += (sender, args) =>
+            {
+                if (!string.IsNullOrWhiteSpace(args.Data))
+                {
+                    progress.Report("[Error] " + args.Data);
+                    results.Add(new TestResult
+                    {
+                        Message = "[Error] " + args.Data,
+                        Status = TestResultStatus.Failed
+                    });
+                }
+            };
+
+            try
+            {
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                await process.WaitForExitAsync();
+            }
+            catch (Exception exception)
+            {
+                progress.Report("Error: " + exception.Message);
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Parses a line of console output into a TestResult object.
+        /// </summary>
+        private static TestResult ParseLine(string line)
+        {
+            var result = new TestResult
+            {
+                Message = line,
+                Status = TestResultStatus.Info
+            };
+
+            if (line.StartsWith("Passed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Passed;
+                ExtractTestInfo(line, result);
+            }
+            else if (line.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Failed;
+                ExtractTestInfo(line, result);
+            }
+            else if (line.StartsWith("Total tests", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Summary;
+            }
+            else if (line.Contains("Test Run Successful", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Passed;
+            }
+            else if (line.Contains("Test Run Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Failed;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Extracts the test name and duration from a Passed/Failed line.
+        /// Example: "Passed TestAddPunkt [1 ms]"
+        /// </summary>
+        private static void ExtractTestInfo(string line, TestResult result)
+        {
+            var parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+                result.TestName = parts[1];
+
+            int start = line.IndexOf('[');
+            int end = line.IndexOf(']');
+            if (start >= 0 && end > start)
+                result.Duration = line.Substring(start + 1, end - start - 1);
+        }
+    }
+}
+
+
+---
+
+What This Code Fixes
+
+1. Parses individual tests correctly (with TestName, Status, Duration).
+
+
+2. Ignores summary lines (Total tests: etc.) for counting purposes.
+
+
+3. Collects Passed/Failed tests into structured TestResult objects.
+
+
+4. Error lines are marked as Failed.
+
+
+
+
+---
+
+Next Step
+
+Would you like me to generate the final version of RunTestsAsync in your RunTestMainWindow.cs so it works perfectly with this new TestRunner.cs?
+
+
+
+Here’s the final version of RunTestsAsync for your RunTestMainWindow.cs.
+This version is fully compatible with the updated TestRunner.cs and ensures accurate test counts and structured results.
+
+
+---
+
+Final RunTestsAsync
+
+private async Task RunTestsAsync()
+{
+    IsTestRunning = true;
+
+    // Progress reporting (raw console lines)
+    var progress = new Progress<string>(line =>
+    {
+        _consoleOutput.Add(line);
+        OnPropertyChanged(nameof(ConsoleOutput));
+    });
+
+    try
+    {
+        // Clear previous outputs
+        _consoleOutput.Clear();
+        _summaryResults.Clear();
+
+        // Run tests
+        var results = await _testExecutionService.RunTestsAsync(_browseDLLViewModel.DLLPath, progress);
+
+        // Process results
+        foreach (var result in results)
+        {
+            // Add raw message to console output
+            _consoleOutput.Add(result.Message);
+
+            // Only add actual test results (Passed/Failed)
+            if (result.Status == TestResultStatus.Passed || result.Status == TestResultStatus.Failed)
+            {
+                _summaryResults.Add(result);
+            }
+        }
+
+        // Update ViewModel (counts and structured results)
+        _summaryViewModel.UpdateFromResults(_summaryResults);
+
+        OnPropertyChanged(nameof(SummaryResults));
+        OnPropertyChanged(nameof(ConsoleOutput));
+    }
+    catch (Exception ex)
+    {
+        // Handle unexpected errors
+        var error = new TestResult
+        {
+            Message = "[Error] " + ex.Message,
+            Status = TestResultStatus.Failed
+        };
+        _consoleOutput.Add(error.Message);
+        _summaryResults.Add(error);
+        _summaryViewModel.UpdateFromResults(_summaryResults);
+    }
+    finally
+    {
+        IsTestRunning = false;
+    }
+}
+
+
+---
+
+Changes Made
+
+1. _summaryResults.Clear() ensures old results don’t interfere.
+
+
+2. Only Passed and Failed results are added to _summaryResults.
+
+
+3. UpdateFromResults(_summaryResults) updates PassedCount, FailedCount, and TotalCount automatically.
+
+
+4. ConsoleOutput still shows raw output lines.
+
+
+
+
+---
+
+Next Step: UI
+
+Your SummaryResults now contains structured TestResult objects.
+In your XAML, you can use a DataGrid to display the test name, status, and duration:
+
+<DataGrid ItemsSource="{Binding RunTestsViewModel.SummaryResults}" AutoGenerateColumns="False">
+    <DataGrid.Columns>
+        <DataGridTextColumn Header="Test Name" Binding="{Binding TestName}" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" />
+        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" />
+    </DataGrid.Columns>
+</DataGrid>
+
+
+---
+
+Would You Like Me to...
+
+Generate the final version of TestSummaryViewModel (with PassedCount, FailedCount, and TotalCount properties) so your UI can display a proper test summary like this?
+
+Total: 3
+Passed: 2
+Failed: 1
+
+Would you like me to write that for you?
+
+
+
+
+Here is the final version of TestSummaryViewModel, which works perfectly with the updated TestRunner.cs and RunTestsAsync logic.
+
+
+---
+
+Final TestSummaryViewModel.cs
+
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+
+namespace NeuUITest.ViewModels
+{
+    public class TestSummaryViewModel : INotifyPropertyChanged
+    {
+        private int _passedCount;
+        private int _failedCount;
+        private int _totalCount;
+
+        /// <summary>
+        /// Collection of structured test results (Passed/Failed tests).
+        /// </summary>
+        public ObservableCollection<TestResult> SummaryResults { get; }
+            = new ObservableCollection<TestResult>();
+
+        public int PassedCount
+        {
+            get => _passedCount;
+            private set
+            {
+                if (_passedCount != value)
+                {
+                    _passedCount = value;
+                    OnPropertyChanged(nameof(PassedCount));
+                }
+            }
+        }
+
+        public int FailedCount
+        {
+            get => _failedCount;
+            private set
+            {
+                if (_failedCount != value)
+                {
+                    _failedCount = value;
+                    OnPropertyChanged(nameof(FailedCount));
+                }
+            }
+        }
+
+        public int TotalCount
+        {
+            get => _totalCount;
+            private set
+            {
+                if (_totalCount != value)
+                {
+                    _totalCount = value;
+                    OnPropertyChanged(nameof(TotalCount));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the test summary from a collection of results.
+        /// </summary>
+        public void UpdateFromResults(ObservableCollection<TestResult> results)
+        {
+            SummaryResults.Clear();
+
+            foreach (var result in results)
+            {
+                SummaryResults.Add(result);
+            }
+
+            PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+            FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+            TotalCount = PassedCount + FailedCount;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+}
+
+
+---
+
+Key Features
+
+1. SummaryResults holds structured TestResult objects for display in the UI.
+
+
+2. PassedCount, FailedCount, TotalCount update automatically when new results are loaded.
+
+
+3. UpdateFromResults repopulates both the collection and the counters.
+
+
+
+
+---
+
+XAML Example for Summary Display
+
+You can add counters to your UI:
+
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+    <TextBlock Text="Total:" Margin="5"/>
+    <TextBlock Text="{Binding TestSummaryViewModel.TotalCount}" Margin="5"/>
+    <TextBlock Text="Passed:" Margin="5"/>
+    <TextBlock Text="{Binding TestSummaryViewModel.PassedCount}" Margin="5"/>
+    <TextBlock Text="Failed:" Margin="5"/>
+    <TextBlock Text="{Binding TestSummaryViewModel.FailedCount}" Margin="5"/>
+</StackPanel>
+
+
+---
+
+Next Step
+
+Would you like me to combine everything (TestRunner.cs, RunTestsAsync, TestSummaryViewModel, and XAML example) into a single final integration guide so you can directly implement the whole solution without confusion?
+
+
+
+
+
+Here is the final integration guide with all necessary code pieces and steps to fully implement the structured test result parsing, counting, and displaying logic.
+
+
+---
+
+1. TestResult Class and Status Enum
+
+Make sure you have a TestResult class and a TestResultStatus enum:
+
+public enum TestResultStatus
+{
+    Info,
+    Passed,
+    Failed,
+    Summary
+}
+
+public class TestResult
+{
+    public string TestName { get; set; }
+    public TestResultStatus Status { get; set; }
+    public string Duration { get; set; }
+    public string Message { get; set; }
+}
+
+
+---
+
+2. TestRunner.cs
+
+Use this final version of TestRunner.cs to run tests and parse results:
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace NeuUITest.Kern
+{
+    public class TestRunner
+    {
+        private readonly string exePath =
+            @"C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\Extensions\TestPlatform\vstest.console.exe";
+
+        public async Task<List<TestResult>> RunTestsAsync(string dllPath, IProgress<string> progress)
+        {
+            var results = new List<TestResult>();
+
+            if (!File.Exists(dllPath) || string.IsNullOrWhiteSpace(dllPath))
+                throw new FileNotFoundException("Invalid DLL path.");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = $"\"{dllPath}\" --InIsolation",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            var process = new Process { StartInfo = psi };
+
+            process.OutputDataReceived += (sender, args) =>
+            {
+                if (!string.IsNullOrWhiteSpace(args.Data))
+                {
+                    progress.Report(args.Data);
+                    results.Add(ParseLine(args.Data));
+                }
+            };
+
+            process.ErrorDataReceived += (sender, args) =>
+            {
+                if (!string.IsNullOrWhiteSpace(args.Data))
+                {
+                    progress.Report("[Error] " + args.Data);
+                    results.Add(new TestResult
+                    {
+                        Message = "[Error] " + args.Data,
+                        Status = TestResultStatus.Failed
+                    });
+                }
+            };
+
+            try
+            {
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                await process.WaitForExitAsync();
+            }
+            catch (Exception exception)
+            {
+                progress.Report("Error: " + exception.Message);
+            }
+
+            return results;
+        }
+
+        private static TestResult ParseLine(string line)
+        {
+            var result = new TestResult
+            {
+                Message = line,
+                Status = TestResultStatus.Info
+            };
+
+            if (line.StartsWith("Passed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Passed;
+                ExtractTestInfo(line, result);
+            }
+            else if (line.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Failed;
+                ExtractTestInfo(line, result);
+            }
+            else if (line.StartsWith("Total tests", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Summary;
+            }
+            else if (line.Contains("Test Run Successful", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Passed;
+            }
+            else if (line.Contains("Test Run Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Status = TestResultStatus.Failed;
+            }
+
+            return result;
+        }
+
+        private static void ExtractTestInfo(string line, TestResult result)
+        {
+            var parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+                result.TestName = parts[1];
+
+            int start = line.IndexOf('[');
+            int end = line.IndexOf(']');
+            if (start >= 0 && end > start)
+                result.Duration = line.Substring(start + 1, end - start - 1);
+        }
+    }
+}
+
+
+---
+
+3. TestSummaryViewModel.cs
+
+This ViewModel manages the counts and the test results:
+
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+
+namespace NeuUITest.ViewModels
+{
+    public class TestSummaryViewModel : INotifyPropertyChanged
+    {
+        private int _passedCount;
+        private int _failedCount;
+        private int _totalCount;
+
+        public ObservableCollection<TestResult> SummaryResults { get; }
+            = new ObservableCollection<TestResult>();
+
+        public int PassedCount
+        {
+            get => _passedCount;
+            private set { _passedCount = value; OnPropertyChanged(nameof(PassedCount)); }
+        }
+
+        public int FailedCount
+        {
+            get => _failedCount;
+            private set { _failedCount = value; OnPropertyChanged(nameof(FailedCount)); }
+        }
+
+        public int TotalCount
+        {
+            get => _totalCount;
+            private set { _totalCount = value; OnPropertyChanged(nameof(TotalCount)); }
+        }
+
+        public void UpdateFromResults(ObservableCollection<TestResult> results)
+        {
+            SummaryResults.Clear();
+            foreach (var result in results)
+                SummaryResults.Add(result);
+
+            PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+            FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+            TotalCount = PassedCount + FailedCount;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+
+---
+
+4. RunTestMainWindow.cs
+
+Here is the final RunTestsAsync:
+
+private async Task RunTestsAsync()
+{
+    IsTestRunning = true;
+
+    var progress = new Progress<string>(line =>
+    {
+        _consoleOutput.Add(line);
+        OnPropertyChanged(nameof(ConsoleOutput));
+    });
+
+    try
+    {
+        _consoleOutput.Clear();
+        _summaryResults.Clear();
+
+        var results = await _testExecutionService.RunTestsAsync(_browseDLLViewModel.DLLPath, progress);
+
+        foreach (var result in results)
+        {
+            _consoleOutput.Add(result.Message);
+
+            if (result.Status == TestResultStatus.Passed || result.Status == TestResultStatus.Failed)
+                _summaryResults.Add(result);
+        }
+
+        _summaryViewModel.UpdateFromResults(_summaryResults);
+
+        OnPropertyChanged(nameof(SummaryResults));
+        OnPropertyChanged(nameof(ConsoleOutput));
+    }
+    catch (Exception ex)
+    {
+        var error = new TestResult
+        {
+            Message = "[Error] " + ex.Message,
+            Status = TestResultStatus.Failed
+        };
+        _consoleOutput.Add(error.Message);
+        _summaryResults.Add(error);
+        _summaryViewModel.UpdateFromResults(_summaryResults);
+    }
+    finally
+    {
+        IsTestRunning = false;
+    }
+}
+
+
+---
+
+5. XAML (UI)
+
+For the Test Results Table
+
+<DataGrid ItemsSource="{Binding RunTestsViewModel.SummaryResults}" AutoGenerateColumns="False" Margin="10">
+    <DataGrid.Columns>
+        <DataGridTextColumn Header="Test Name" Binding="{Binding TestName}" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" />
+        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" />
+    </DataGrid.Columns>
+</DataGrid>
+
+For the Summary Counters
+
+<StackPanel Orientation="Horizontal" Margin="10">
+    <TextBlock Text="Total: " FontWeight="Bold"/>
+    <TextBlock Text="{Binding RunTestsViewModel.TotalCount}" Margin="5,0"/>
+    <TextBlock Text="Passed: " FontWeight="Bold"/>
+    <TextBlock Text="{Binding RunTestsViewModel.PassedCount}" Margin="5,0"/>
+    <TextBlock Text="Failed: " FontWeight="Bold"/>
+    <TextBlock Text="{Binding RunTestsViewModel.FailedCount}" Margin="5,0"/>
+</StackPanel>
+
+
+---
+
+6. Final Workflow
+
+1. TestRunner executes the tests and parses lines into structured TestResult objects.
+
+
+2. RunTestsAsync collects these results and passes them to _summaryViewModel.
+
+
+3. TestSummaryViewModel updates SummaryResults, PassedCount, FailedCount, and TotalCount.
+
+
+4. The UI (DataGrid + counters) is updated automatically via data binding.
+
+
+
+
+---
+
+Next Step for You
+
+Would you like me to create a small example project structure (folders: ViewModels, Kern, Models) with all these files laid out so you can see exactly where each file goes?
+
+
