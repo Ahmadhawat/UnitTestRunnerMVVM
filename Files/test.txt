@@ -123,3 +123,193 @@ Next Step
 
 Would you like me to generate a refactored version of your TestRunner.cs (including RunTestsAsync and ParseLine) as a single, clean file that you can copy-paste directly?
 
+From your XAML (in the image), I can see that you’re using a ListBox to display the test results, and each item is bound to the Message property of SummaryResults:
+
+<ListBox ItemsSource="{Binding RunTestsViewModel.SummaryResults}">
+    <ListBox.ItemTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding Message}" Foreground="{Binding StatusBrush}" />
+        </DataTemplate>
+    </ListBox.ItemTemplate>
+</ListBox>
+
+
+---
+
+Which Control to Use?
+
+If you want to display structured data like Test Name, Status, and Duration, a DataGrid is more appropriate than a ListBox.
+
+Option 1: Use DataGrid for Structured View (Recommended)
+
+Replace your ListBox with something like this:
+
+<DataGrid ItemsSource="{Binding RunTestsViewModel.SummaryResults}" 
+          AutoGenerateColumns="False" 
+          FontFamily="Consolas" FontSize="13" 
+          Background="White" Foreground="Black"
+          BorderBrush="Gray" BorderThickness="1"
+          HeadersVisibility="Column">
+    <DataGrid.Columns>
+        <DataGridTextColumn Header="Test Name" Binding="{Binding TestName}" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" />
+        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" />
+    </DataGrid.Columns>
+</DataGrid>
+
+
+---
+
+Option 2: Keep ListBox (Simpler but Less Structured)
+
+If you still want a ListBox but show structured info, you can change the TextBlock to display multiple bindings, e.g.:
+
+<ListBox ItemsSource="{Binding RunTestsViewModel.SummaryResults}">
+    <ListBox.ItemTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding TestName}" Margin="5,0"/>
+                <TextBlock Text="{Binding Status}" Margin="5,0"/>
+                <TextBlock Text="{Binding Duration}" Margin="5,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </ListBox.ItemTemplate>
+</ListBox>
+
+
+---
+
+Which One Should You Choose?
+
+Choose DataGrid if you want a table-like structured format (best for showing test results with multiple columns).
+
+Choose ListBox with StackPanel if you want a simpler display but still show multiple fields.
+
+
+
+---
+
+Next Step
+
+Would you like me to update your current XAML (from the image) to use a DataGrid with Test Name, Status, and Duration columns directly?
+
+Great question!
+The TestSummaryViewModel will need to adapt to support structured test results (with TestName, Status, and Duration) instead of just messages. Let's break down what changes are needed.
+
+
+---
+
+1. Current Situation
+
+From your XAML and previous code snippets, we know:
+
+RunTestsViewModel.SummaryResults is bound to your UI.
+
+MainTestSummaryControl counts PassedCount, FailedCount, and TotalCount from the test results.
+
+
+Currently, SummaryResults likely contains raw messages or minimal TestResult objects.
+
+
+---
+
+2. Updated TestSummaryViewModel
+
+We want the TestSummaryViewModel to:
+
+Hold a collection of structured TestResult objects.
+
+Update test counts automatically based on the parsed results.
+
+
+Here’s how TestSummaryViewModel should look:
+
+public class TestSummaryViewModel : INotifyPropertyChanged
+{
+    private int _passedCount;
+    private int _failedCount;
+    private int _totalCount;
+
+    public ObservableCollection<TestResult> SummaryResults { get; } 
+        = new ObservableCollection<TestResult>();
+
+    public int PassedCount
+    {
+        get => _passedCount;
+        set { _passedCount = value; OnPropertyChanged(nameof(PassedCount)); }
+    }
+
+    public int FailedCount
+    {
+        get => _failedCount;
+        set { _failedCount = value; OnPropertyChanged(nameof(FailedCount)); }
+    }
+
+    public int TotalCount
+    {
+        get => _totalCount;
+        set { _totalCount = value; OnPropertyChanged(nameof(TotalCount)); }
+    }
+
+    public void UpdateFromResults(IEnumerable<TestResult> results)
+    {
+        SummaryResults.Clear();
+        foreach (var result in results)
+        {
+            SummaryResults.Add(result);
+        }
+
+        PassedCount = results.Count(r => r.Status == TestResultStatus.Passed);
+        FailedCount = results.Count(r => r.Status == TestResultStatus.Failed);
+        TotalCount = PassedCount + FailedCount;
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void OnPropertyChanged(string propertyName) 
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+
+---
+
+3. Connection to RunTestsAsync
+
+Your RunTestsAsync method in RunTestMainWindow.cs will call:
+
+_summaryViewModel.UpdateFromResults(_summaryResults);
+
+where _summaryResults now contains structured TestResult objects.
+
+
+---
+
+4. UI Changes
+
+With this ViewModel:
+
+The DataGrid (or ListBox) will bind to SummaryResults.
+
+The counters (PassedCount, FailedCount, TotalCount) can be displayed in the UI using data binding:
+
+
+<TextBlock Text="Passed:"/>
+<TextBlock Text="{Binding PassedCount}" />
+<TextBlock Text="Failed:"/>
+<TextBlock Text="{Binding FailedCount}" />
+<TextBlock Text="Total:"/>
+<TextBlock Text="{Binding TotalCount}" />
+
+
+---
+
+5. Next Step
+
+Would you like me to refactor your entire flow (including RunTestsAsync, TestRunner, TestSummaryViewModel, and XAML) into a final working version with:
+
+A DataGrid showing TestName, Status, Duration.
+
+Automatic updates to PassedCount, FailedCount, TotalCount.
+
+
+This way, you could copy-paste everything and it will just work.
+
