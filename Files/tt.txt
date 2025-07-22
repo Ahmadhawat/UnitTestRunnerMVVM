@@ -1,0 +1,73 @@
+private async Task RunTestsAsync()
+{
+    try
+    {
+        IsTestRunning = true;
+        _consoleOutput.Clear();
+        OnPropertyChanged(nameof(ConsoleOutput));
+
+        var fullOutput = new StringBuilder();
+
+        // Capture progress lines
+        var progress = new Progress<string>(line =>
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                _consoleOutput.Add(line);
+                OnPropertyChanged(nameof(ConsoleOutput));
+                fullOutput.AppendLine(line);
+            }
+        });
+
+        // Execute tests
+        var results = await _testExecutionService.RunTestsAsync(_browseDLLViewModel.DLLPath, progress);
+
+        // Append any final output from results
+        foreach (var result in results)
+        {
+            _consoleOutput.Add(result.Message);
+            fullOutput.AppendLine(result.Message);
+
+            if (result.Status == TestResultStatus.Info)
+                _summaryResults.Add(result);
+        }
+
+        OnPropertyChanged(nameof(SummaryResults));
+        OnPropertyChanged(nameof(ConsoleOutput));
+
+        // Log and update summary
+        string fullText = fullOutput.ToString();
+        if (string.IsNullOrWhiteSpace(fullText))
+        {
+            // Debugging info
+            fullText = "No test output was captured. Please check the test execution service.";
+            _consoleOutput.Add(fullText);
+        }
+
+        // Update the summary ViewModel
+        _summaryViewModel.UpdateFromResults(fullText);
+
+        // Optional debug log
+        System.Diagnostics.Debug.WriteLine("RunTestsAsync collected output:\n" + fullText);
+
+        // Update UI with final summary
+        _summaryViewModel.UpdateFromResults(fullText);
+    }
+    catch (Exception ex)
+    {
+        var error = $"[Error] {ex.Message}";
+        _consoleOutput.Add(error);
+        _summaryResults.Add(new TestResult
+        {
+            Message = error,
+            Status = TestResultStatus.Failed
+        });
+
+        OnPropertyChanged(nameof(SummaryResults));
+        OnPropertyChanged(nameof(ConsoleOutput));
+    }
+    finally
+    {
+        IsTestRunning = false;
+    }
+}
