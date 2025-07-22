@@ -1,0 +1,38 @@
+public static TestResult ParseLine(string line)
+{
+    // Default status
+    var status = TestResultStatus.Info;
+
+    // Identify test-level results
+    if (line.StartsWith("Passed", StringComparison.OrdinalIgnoreCase))
+    {
+        status = TestResultStatus.Passed;
+    }
+    else if (line.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        status = TestResultStatus.Failed;
+    }
+    // Identify summary lines
+    else if (line.StartsWith("Total tests", StringComparison.OrdinalIgnoreCase))
+    {
+        status = TestResultStatus.Summary;
+    }
+    else if (string.Equals(line, "Test Run Successful", StringComparison.OrdinalIgnoreCase))
+    {
+        // Marking the overall run success (not individual tests)
+        status = TestResultStatus.Summary;
+    }
+    else if (string.Equals(line, "Test Run Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        status = TestResultStatus.Summary;
+    }
+
+    // Debug log to ensure correctness
+    Console.WriteLine($"[DEBUG] Line: '{line}' => Status: {status}");
+
+    return new TestResult
+    {
+        Message = line,
+        Status = status
+    };
+}
